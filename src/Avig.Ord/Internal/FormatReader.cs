@@ -6,6 +6,11 @@ namespace Avig.Ord.Internal;
 /// <summary>Reads w:rPr and w:pPr into <see cref="RunFormat"/> and <see cref="ParagraphFormat"/>.</summary>
 internal static class FormatReader
 {
+    // The most twips and half-points a Length holds: more overflowed the multiplication into EMUs, and a
+    // number such as 20000000000000000 in a file came back as a negative length. Such a number is no length.
+    private const long MaxTwips = long.MaxValue / Length.EmuPerTwip;
+    private const long MaxHalfPoints = long.MaxValue / Length.EmuPerPoint;
+
     public static RunFormat Run(WordNames names, XElement? properties)
     {
         if (properties is null)
@@ -74,7 +79,7 @@ internal static class FormatReader
 
         if (value is not null)
         {
-            if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long twips) == true)
+            if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long twips) == true && twips is >= -MaxTwips and <= MaxTwips)
             {
                 length = Length.FromTwips(twips);
             }
@@ -104,7 +109,7 @@ internal static class FormatReader
     {
         Length? length = null;
 
-        if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long halfPoints) == true)
+        if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long halfPoints) == true && halfPoints is >= -MaxHalfPoints and <= MaxHalfPoints)
         {
             length = Length.FromHalfPoints(halfPoints);
         }

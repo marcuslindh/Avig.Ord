@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Avig.Ord.Fuzz</RootNamespace>
+    <IsPackable>false</IsPackable>
+
+    <!-- SharpFuzz instruments the IL of Avig.Ord.dll after publish, so the assemblies must
+         stay plain IL: no ReadyToRun and no AOT. -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+
+    <!-- CA5394: System.Random is the point here. A fuzz input must be reproducible from its seed,
+         not unpredictable. -->
+    <NoWarn>$(NoWarn);CA5394</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Avig.Ord\Avig.Ord.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SharpFuzz" Version="2.3.0" />
+    <!-- The round-trip target checks saved files with Microsoft's schema validator. The harness
+         is not part of the package, so this is not a dependency of Avig.Ord. -->
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Avig" />
+    <Using Include="Avig.Ord" />
+  </ItemGroup>
+
+</Project>

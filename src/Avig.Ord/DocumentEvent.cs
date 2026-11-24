@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Xml;
+using System.Xml.Linq;
 using Avig.OpenXml;
+using Avig.Ord.Internal;
 
 namespace Avig.Ord;
 
@@ -56,8 +58,14 @@ internal static class EventReader
         // field instruction …), or -1; and how deep fields are nested, with whether each is still
         // in its instruction.
         int skipUntil = -1;
-        Stack<bool> fields = new();
+        int pendingRow = -1;
+        Stack<(bool InInstruction, int Container)> fields = new();
         bool inInstruction = false;
+
+        // How many hyperlinks, simple fields and content controls the reader is in: a field begun
+        // inside one ends with it, as Paragraph.Inlines reads it.
+        int containers = 0;
+        int ignoredFields = 0;
         bool positioned = false;
         bool first = true;
 
@@ -99,6 +107,38 @@ internal static class EventReader
                 continue;
             }
 
+            // A row marked deleted (Accepted view) or inserted (Original view) in its w:trPr is
+            // left out, as Table.Rows leaves it out; the properties come before the cells.
+            if (pendingRow >= 0 && reader.NodeType is XmlNodeType.Element or XmlNodeType.EndElement)
+            {
+                int row = pendingRow;
+
+                if (reader.NodeType == XmlNodeType.Element && reader.Depth == row + 1 && reader.LocalName is "tblPrEx" or "trPr")
+                {
+                    XNode properties = await XNode.ReadFromAsync(reader, cancellationToken);
+                    positioned = true;
+
+                    if (properties is XElement element && element.Name.LocalName == "trPr")
+                    {
+                        pendingRow = -1;
+
+                        if (IsHidden(element, view) == true)
+                        {
+                            skipUntil = row;
+
+                            continue;
+                        }
+
+                        yield return new DocumentEvent(DocumentEventKind.RowStart, string.Empty, tables);
+                    }
+
+                    continue;
+                }
+
+                pendingRow = -1;
+                yield return new DocumentEvent(DocumentEventKind.RowStart, string.Empty, tables);
+            }
+
             if (reader.NodeType == XmlNodeType.Element)
             {
                 string name = reader.LocalName;
@@ -114,9 +154,21 @@ internal static class EventReader
                     continue;
                 }
 
+                // Only WordprocessingML: the text of an equation (m:t) is no more in the body's
+                // text here than in Paragraph.Text.
+                if (reader.NamespaceURI is not (WordNames.TransitionalMain or WordNames.StrictMain))
+                {
+                    continue;
+                }
+
                 switch (name)
                 {
                     case "p":
+                        // Fields are read a paragraph at a time, as Paragraph.Inlines reads them: one left
+                        // open in a paragraph before does not hide this one's text as its instruction.
+                        fields.Clear();
+                        ignoredFields = 0;
+                        inInstruction = false;
                         yield return new DocumentEvent(DocumentEventKind.ParagraphStart, string.Empty, tables);
 
                         if (empty == true)
@@ -127,39 +179,103 @@ internal static class EventReader
                         break;
 
                     case "tbl":
-                        tables++;
-                        yield return new DocumentEvent(DocumentEventKind.TableStart, string.Empty, tables - 1);
+                        yield return new DocumentEvent(DocumentEventKind.TableStart, string.Empty, tables);
+
+                        // An empty element has no end element to give the end event on.
+                        if (empty == true)
+                        {
+                            yield return new DocumentEvent(DocumentEventKind.TableEnd, string.Empty, tables);
+                        }
+                        else
+                        {
+                            tables++;
+                        }
 
                         break;
 
                     case "tr":
-                        yield return new DocumentEvent(DocumentEventKind.RowStart, string.Empty, tables);
+                        if (empty == true)
+                        {
+                            yield return new DocumentEvent(DocumentEventKind.RowStart, string.Empty, tables);
+                            yield return new DocumentEvent(DocumentEventKind.RowEnd, string.Empty, tables);
+                        }
+                        else
+                        {
+                            // The row starts once its properties have said whether the view has it.
+                            pendingRow = reader.Depth;
+                        }
 
                         break;
 
                     case "tc":
                         yield return new DocumentEvent(DocumentEventKind.CellStart, string.Empty, tables);
 
+                        if (empty == true)
+                        {
+                            yield return new DocumentEvent(DocumentEventKind.CellEnd, string.Empty, tables);
+                        }
+
+                        break;
+
+                    case "hyperlink":
+                    case "fldSimple":
+                    case "sdt":
+                        if (empty == false)
+                        {
+                            containers++;
+                        }
+
+                        break;
+
+                    case "noBreakHyphen":
+                        if (inInstruction == false)
+                        {
+                            yield return new DocumentEvent(DocumentEventKind.Text, "‑", tables);
+                        }
+
+                        break;
+
+                    case "sym":
+                        OpcXml.TryGetAttribute(reader, "char", out string? code);
+                        string symbol = InlineReader.Symbol(code);
+
+                        if (inInstruction == false && symbol.Length > 0)
+                        {
+                            yield return new DocumentEvent(DocumentEventKind.Text, symbol, tables);
+                        }
+
                         break;
 
                     case "fldChar":
                         OpcXml.TryGetAttribute(reader, "fldCharType", out string? type);
 
-                        if (type == "begin")
+                        // As Paragraph.Inlines: fields nested past InlineReader.MaxFieldNesting are part of the one they are in.
+                        if (ignoredFields > 0 || (type == "begin" && fields.Count >= InlineReader.MaxFieldNesting))
                         {
-                            fields.Push(true);
+                            if (type == "begin")
+                            {
+                                ignoredFields++;
+                            }
+                            else if (type == "end")
+                            {
+                                ignoredFields--;
+                            }
+                        }
+                        else if (type == "begin")
+                        {
+                            fields.Push((true, containers));
                         }
                         else if (type == "separate" && fields.Count > 0)
                         {
-                            fields.Pop();
-                            fields.Push(false);
+                            (bool _, int container) = fields.Pop();
+                            fields.Push((false, container));
                         }
                         else if (type == "end" && fields.Count > 0)
                         {
                             fields.Pop();
                         }
 
-                        inInstruction = fields.Contains(true);
+                        inInstruction = fields.Any(field => field.InInstruction == true);
 
                         break;
 
@@ -216,7 +332,7 @@ internal static class EventReader
                 continue;
             }
 
-            if (reader.NodeType != XmlNodeType.EndElement)
+            if (reader.NodeType != XmlNodeType.EndElement || reader.NamespaceURI is not (WordNames.TransitionalMain or WordNames.StrictMain))
             {
                 continue;
             }
@@ -224,7 +340,24 @@ internal static class EventReader
             switch (reader.LocalName)
             {
                 case "p":
+                    fields.Clear();
+                    ignoredFields = 0;
+                    inInstruction = false;
                     yield return new DocumentEvent(DocumentEventKind.ParagraphEnd, string.Empty, tables);
+
+                    break;
+
+                case "hyperlink":
+                case "fldSimple":
+                case "sdt":
+                    containers--;
+
+                    while (fields.Count > 0 && fields.Peek().Container > containers)
+                    {
+                        fields.Pop();
+                    }
+
+                    inInstruction = fields.Any(field => field.InInstruction == true);
 
                     break;
 
@@ -248,6 +381,15 @@ internal static class EventReader
                     break;
             }
         }
+    }
+
+    /// <summary>A row the view does not have: marked deleted in the Accepted view, inserted in the Original view, as <see cref="TableRow.IsVisible"/> decides.</summary>
+    private static bool IsHidden(XElement properties, RevisionView view)
+    {
+        bool deleted = properties.Elements().Any(element => element.Name.LocalName == "del");
+        bool inserted = properties.Elements().Any(element => element.Name.LocalName == "ins");
+
+        return (deleted == true && view == RevisionView.Accepted) || (inserted == true && view == RevisionView.Original);
     }
 
     /// <summary>

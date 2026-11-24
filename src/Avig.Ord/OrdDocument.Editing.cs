@@ -192,7 +192,38 @@ public sealed partial class OrdDocument
             width = page - (section.MarginLeft ?? Length.Zero) - (section.MarginRight ?? Length.Zero);
         }
 
+        // Margins wider than the page (the schema allows them) gave a table negative column widths.
+        if (width <= Length.Zero)
+        {
+            width = PageSetup.A4.TextWidth;
+        }
+
         return width;
+    }
+
+    /// <summary>
+    /// The id after the largest one in use, at least <paramref name="minimum"/>; or, when the
+    /// largest is int.MaxValue, the smallest one from <paramref name="minimum"/> not in use. A
+    /// file may use any id, and one past int.MaxValue became a negative id the schema forbids.
+    /// </summary>
+    internal static int NextFreeId(IEnumerable<int> used, int minimum)
+    {
+        HashSet<int> taken = [.. used];
+        int largest = taken.DefaultIfEmpty(minimum - 1).Max();
+
+        if (largest < int.MaxValue)
+        {
+            return Math.Max(largest + 1, minimum);
+        }
+
+        int candidate = minimum;
+
+        while (taken.Contains(candidate) == true)
+        {
+            candidate++;
+        }
+
+        return candidate;
     }
 
     /// <summary>Adds the styles the builders used to the styles part, made when the document has none, and the styles they are based on.</summary>
@@ -263,10 +294,7 @@ public sealed partial class OrdDocument
         XElement root = NumberingRoot();
         WordNames names = WordNames.For(root);
         string abstractId = EnsureAbstract(root, names, bullet);
-        int next = root.Elements(names.W + "num")
-            .Select(element => FormatReader.Integer(element.Attribute(names.W + "numId")?.Value) ?? 0)
-            .DefaultIfEmpty(0)
-            .Max() + 1;
+        int next = NextFreeId(root.Elements(names.W + "num").Select(element => FormatReader.Integer(element.Attribute(names.W + "numId")?.Value) ?? 0), 1);
         string id = next.ToString(CultureInfo.InvariantCulture);
         XElement instance = BuiltInStyles.NumberingInstance(names, id, bullet);
         instance.Element(names.W + "abstractNumId")!.SetAttributeValue(names.Val, abstractId);
@@ -295,10 +323,7 @@ public sealed partial class OrdDocument
             }
         }
 
-        int next = root.Elements(names.W + "abstractNum")
-            .Select(element => FormatReader.Integer(element.Attribute(names.W + "abstractNumId")?.Value) ?? 0)
-            .DefaultIfEmpty(-1)
-            .Max() + 1;
+        int next = NextFreeId(root.Elements(names.W + "abstractNum").Select(element => FormatReader.Integer(element.Attribute(names.W + "abstractNumId")?.Value) ?? 0), 0);
         string template = "1";
 
         if (bullet == true)
@@ -393,11 +418,12 @@ public sealed partial class OrdDocument
         {
             if (document.drawingId < 0)
             {
-                document.drawingId = document.ContentRoots()
-                    .SelectMany(root => root.Descendants().Where(element => element.Name.LocalName == "docPr"))
-                    .Select(element => FormatReader.Integer(element.Attribute("id")?.Value) ?? 0)
-                    .DefaultIfEmpty(0)
-                    .Max();
+                // One before the next free id, so that an id of int.MaxValue in the file does not wrap round.
+                document.drawingId = NextFreeId(
+                    document.ContentRoots()
+                        .SelectMany(root => root.Descendants().Where(element => element.Name.LocalName == "docPr"))
+                        .Select(element => FormatReader.Integer(element.Attribute("id")?.Value) ?? 0),
+                    1) - 1;
             }
 
             document.drawingId++;
@@ -433,10 +459,7 @@ public sealed partial class OrdDocument
 
             XElement root = document.Xml(existing).Root!;
             WordNames names = WordNames.For(root);
-            int next = root.Elements(names.W + element)
-                .Select(note => FormatReader.Integer(note.Attribute(names.WId)?.Value) ?? 0)
-                .DefaultIfEmpty(0)
-                .Max() + 1;
+            int next = NextFreeId(root.Elements(names.W + element).Select(note => FormatReader.Integer(note.Attribute(names.WId)?.Value) ?? 0), 1);
             string id = next.ToString(CultureInfo.InvariantCulture);
             root.Add(new XElement(names.W + element, new XAttribute(names.WId, id), paragraphs));
 

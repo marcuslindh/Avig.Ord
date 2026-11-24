@@ -1,0 +1,41 @@
+{
+  "Body": [
+    {
+      "Label": "",
+      "Text": "Det var en nygammal text."
+    },
+    {
+      "Label": "",
+      "Text": "Ett stycke som tas bort."
+    },
+    {
+      "Label": "",
+      "Text": "Ett stycke som står kvar."
+    },
+    {
+      "Label": "",
+      "Text": "Ett nytt stycke. Med mer text."
+    }
+  ],
+  "Accepted": [
+    {
+      "Label": "",
+      "Text": "Det var en ny text."
+    },
+    {
+      "Label": "",
+      "Text": "Ett stycke som står kvar."
+    },
+    {
+      "Label": "",
+      "Text": "Ett nytt stycke. Med mer text."
+    }
+  ],
+  "Pictures": 0,
+  "Headers": [],
+  "Footers": [],
+  "Footnotes": [],
+  "Endnotes": [],
+  "Comments": [],
+  "TextBoxes": []
+}

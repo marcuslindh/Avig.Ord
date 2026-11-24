@@ -28,6 +28,35 @@ internal sealed class MarkdownRenderer
         return renderer.output.ToString().TrimEnd('\n') + "\n";
     }
 
+    /// <summary>A renderer for a body read a block at a time: <see cref="Next"/> gives what each block adds, and <see cref="Finish"/> the end. Together they give what <see cref="Render"/> gives.</summary>
+    public static MarkdownRenderer ForStream(MarkdownOptions options)
+    {
+        return new MarkdownRenderer(options);
+    }
+
+    /// <summary>The Markdown one more block adds. The blank lines after it are held back until the next block, since the last block has none.</summary>
+    public string Next(Block block)
+    {
+        WriteBlocks([block], 0);
+        int end = output.Length;
+
+        while (end > 0 && output[end - 1] == '\n')
+        {
+            end--;
+        }
+
+        string written = output.ToString(0, end);
+        output.Remove(0, end);
+
+        return written;
+    }
+
+    /// <summary>The end of the Markdown: the one line end <see cref="Render"/> ends with.</summary>
+    public static string Finish()
+    {
+        return "\n";
+    }
+
     /// <summary>The file name a picture is linked as: its part's file name (image1.png), or a made-up one for a linked picture.</summary>
     public static string PictureFileName(Picture picture)
     {
@@ -183,7 +212,10 @@ internal sealed class MarkdownRenderer
         }
 
         Separate(false);
-        int columns = Math.Max(table.ColumnCount, rows.Max(row => row.Cells.Sum(cell => cell.ColumnSpan)));
+
+        // No more than Word allows: a w:tblGrid of a hundred thousand w:gridCol padded every row
+        // to that many cells, a few megabytes of file to gigabytes of Markdown.
+        int columns = Math.Min(Math.Max(table.ColumnCount, rows.Max(row => Table.SpannedColumns(row))), TableCell.MaxColumns);
         bool header = true;
 
         foreach (TableRow row in rows)

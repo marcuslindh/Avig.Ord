@@ -1,0 +1,71 @@
+{
+  "Body": [
+    {
+      "Label": "",
+      "Text": "Innehållskontroller av Word"
+    },
+    {
+      "Label": "",
+      "Text": "Namn: Anna"
+    },
+    {
+      "Label": "",
+      "Text": "Val: Nej"
+    },
+    {
+      "Label": "",
+      "Text": "Kryss: ☒"
+    },
+    {
+      "Label": "",
+      "Text": "Ett stycke i en blockkontroll"
+    },
+    {
+      "Label": "",
+      "Text": "Stycket med textrutan"
+    },
+    {
+      "Label": "",
+      "Text": "Slut"
+    }
+  ],
+  "Accepted": [
+    {
+      "Label": "",
+      "Text": "Innehållskontroller av Word"
+    },
+    {
+      "Label": "",
+      "Text": "Namn: Anna"
+    },
+    {
+      "Label": "",
+      "Text": "Val: Nej"
+    },
+    {
+      "Label": "",
+      "Text": "Kryss: ☒"
+    },
+    {
+      "Label": "",
+      "Text": "Ett stycke i en blockkontroll"
+    },
+    {
+      "Label": "",
+      "Text": "Stycket med textrutan"
+    },
+    {
+      "Label": "",
+      "Text": "Slut"
+    }
+  ],
+  "Pictures": 0,
+  "Headers": [],
+  "Footers": [],
+  "Footnotes": [],
+  "Endnotes": [],
+  "Comments": [],
+  "TextBoxes": [
+    "I rutan"
+  ]
+}

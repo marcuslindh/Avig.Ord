@@ -1,0 +1,73 @@
+{
+  "Body": [
+    {
+      "Label": "",
+      "Text": "Fält av Word"
+    },
+    {
+      "Label": "",
+      "Text": "Kära «Förnamn»"
+    },
+    {
+      "Label": "",
+      "Text": "Länk: Läs mer"
+    },
+    {
+      "Label": "",
+      "Text": "Sidan är 1"
+    },
+    {
+      "Label": "",
+      "Text": "Före sidbrytningen"
+    },
+    {
+      "Label": "",
+      "Text": "\n"
+    },
+    {
+      "Label": "",
+      "Text": "Efter sidbrytningen"
+    }
+  ],
+  "Accepted": [
+    {
+      "Label": "",
+      "Text": "Fält av Word"
+    },
+    {
+      "Label": "",
+      "Text": "Kära «Förnamn»"
+    },
+    {
+      "Label": "",
+      "Text": "Länk: Läs mer"
+    },
+    {
+      "Label": "",
+      "Text": "Sidan är 1"
+    },
+    {
+      "Label": "",
+      "Text": "Före sidbrytningen"
+    },
+    {
+      "Label": "",
+      "Text": "\n"
+    },
+    {
+      "Label": "",
+      "Text": "Efter sidbrytningen"
+    }
+  ],
+  "Pictures": 0,
+  "Headers": [
+    "Sidhuvud av Word"
+  ],
+  "Footers": [
+    "Sida # av #"
+  ],
+  "Footnotes": [],
+  "Endnotes": [],
+  "Comments": [],
+  "TextBoxes": []
+}

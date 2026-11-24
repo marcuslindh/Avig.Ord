@@ -2,6 +2,7 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="CLAUDE.md" />
+    <File Path="docs/testplan.md" />
     <File Path="README.md" />
     <File Path="publish.ps1" />
     <File Path="release.ps1" />
@@ -11,5 +12,9 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Avig.Ord.Tests/Avig.Ord.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Avig.Ord.Fuzz/Avig.Ord.Fuzz.csproj" />
+    <Project Path="tools/Avig.Ord.WordCheck/Avig.Ord.WordCheck.csproj" />
   </Folder>
 </Solution>

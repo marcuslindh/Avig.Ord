@@ -344,10 +344,10 @@ public sealed partial class OrdDocument
     /// <summary>The footers, in the order the sections refer to them.</summary>
     public IReadOnlyList<HeaderFooter> Footers => HeadersAndFooters("footerReference", false);
 
-    /// <summary>The footnotes, without the separators Word keeps among them.</summary>
+    /// <summary>The footnotes the body refers to, in the order it refers to them, without the separators Word keeps among them.</summary>
     public IReadOnlyList<Note> Footnotes => Notes("footnotes", "footnote", NoteKind.Footnote);
 
-    /// <summary>The endnotes, without the separators Word keeps among them.</summary>
+    /// <summary>The endnotes the body refers to, in the order it refers to them, without the separators Word keeps among them.</summary>
     public IReadOnlyList<Note> Endnotes => Notes("endnotes", "endnote", NoteKind.Endnote);
 
     /// <summary>The comments.</summary>
@@ -514,7 +514,7 @@ public sealed partial class OrdDocument
         return list;
     }
 
-    private IReadOnlyList<Note> Notes(string relationship, string element, NoteKind kind)
+    private List<Note> Notes(string relationship, string element, NoteKind kind)
     {
         string? part = RelatedPart(MainPartName, relationship);
 
@@ -525,10 +525,33 @@ public sealed partial class OrdDocument
 
         DocumentContext context = ContextFor(part);
         WordNames names = context.Names;
+        Dictionary<string, XElement> byId = new(StringComparer.Ordinal);
 
-        return [.. Xml(part).Root?.Elements(names.W + element)
-            .Where(note => note.Attribute(names.Type)?.Value is null or "normal")
-            .Select(note => new Note(context, note, kind)) ?? []];
+        foreach (XElement note in Xml(part).Root?.Elements(names.W + element) ?? [])
+        {
+            string? id = note.Attribute(names.WId)?.Value;
+
+            if (id is not null && note.Attribute(names.Type)?.Value is null or "normal")
+            {
+                byId.TryAdd(id, note);
+            }
+        }
+
+        // The notes the body refers to, in the order it refers to them, as Word lists them. A
+        // note nothing refers to any more (its reference was replaced by Paragraph.SetText or
+        // deleted in another program) is not in the document for Word, which drops it on saving.
+        WordNames main = MainContext.Names;
+        List<Note> notes = [];
+
+        foreach (string id in Body.Descendants(main.W + (element + "Reference")).Select(reference => reference.Attribute(main.WId)?.Value ?? string.Empty).Distinct(StringComparer.Ordinal))
+        {
+            if (byId.TryGetValue(id, out XElement? note) == true)
+            {
+                notes.Add(new Note(context, note, kind));
+            }
+        }
+
+        return notes;
     }
 
     /// <summary>docProps/core.xml, made when the document has none.</summary>

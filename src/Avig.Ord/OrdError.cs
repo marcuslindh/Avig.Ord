@@ -52,6 +52,9 @@ public static class OrdError
     /// <summary>How every message about a file that is not a Word document starts.</summary>
     internal const string NotWordPrefix = "The file is not a Word document";
 
+    /// <summary>What Avig.OpenXml's depth-limited reader says when XML is nested past the limit it was given.</summary>
+    private const string DepthMarker = "levels deep, which no office program writes";
+
     /// <summary>The kind of a failed result; <see cref="OrdErrorKind.Unknown"/> for a success.</summary>
     public static OrdErrorKind ErrorKind(this Result result)
     {
@@ -115,7 +118,10 @@ public static class OrdError
 
     private static OrdErrorKind OfMessage(string message)
     {
-        if (message.Contains(OpcErrors.LimitMarker + "OrdLimits.", StringComparison.Ordinal) == true)
+        // XML nested deeper than OrdLimits.MaxXmlDepth: Avig.OpenXml's reader says so in its own
+        // words, without the limit's name, and the message was classified as Damaged.
+        if (message.Contains(OpcErrors.LimitMarker + "OrdLimits.", StringComparison.Ordinal) == true
+            || message.Contains(DepthMarker, StringComparison.Ordinal) == true)
         {
             return OrdErrorKind.TooLarge;
         }

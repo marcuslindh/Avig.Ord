@@ -1,0 +1,93 @@
+{
+  "Body": [
+    {
+      "Label": "",
+      "Text": "Listor av Word"
+    },
+    {
+      "Label": "1)",
+      "Text": "Kapitel ett"
+    },
+    {
+      "Label": "a)",
+      "Text": "Avsnitt ett och ett"
+    },
+    {
+      "Label": "i)",
+      "Text": "Stycke ett och ett och ett"
+    },
+    {
+      "Label": "b)",
+      "Text": "Avsnitt ett och två"
+    },
+    {
+      "Label": "2)",
+      "Text": "Kapitel två"
+    },
+    {
+      "Label": "3)",
+      "Text": "Vanligt stycke mellan listorna"
+    },
+    {
+      "Label": "4)",
+      "Text": "Punkt ett"
+    },
+    {
+      "Label": "bullet",
+      "Text": "Underpunkt"
+    },
+    {
+      "Label": "bullet",
+      "Text": "Punkt två"
+    }
+  ],
+  "Accepted": [
+    {
+      "Label": "",
+      "Text": "Listor av Word"
+    },
+    {
+      "Label": "1)",
+      "Text": "Kapitel ett"
+    },
+    {
+      "Label": "a)",
+      "Text": "Avsnitt ett och ett"
+    },
+    {
+      "Label": "i)",
+      "Text": "Stycke ett och ett och ett"
+    },
+    {
+      "Label": "b)",
+      "Text": "Avsnitt ett och två"
+    },
+    {
+      "Label": "2)",
+      "Text": "Kapitel två"
+    },
+    {
+      "Label": "3)",
+      "Text": "Vanligt stycke mellan listorna"
+    },
+    {
+      "Label": "4)",
+      "Text": "Punkt ett"
+    },
+    {
+      "Label": "bullet",
+      "Text": "Underpunkt"
+    },
+    {
+      "Label": "bullet",
+      "Text": "Punkt två"
+    }
+  ],
+  "Pictures": 0,
+  "Headers": [],
+  "Footers": [],
+  "Footnotes": [],
+  "Endnotes": [],
+  "Comments": [],
+  "TextBoxes": []
+}

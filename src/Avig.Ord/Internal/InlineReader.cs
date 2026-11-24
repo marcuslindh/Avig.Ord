@@ -11,6 +11,9 @@ namespace Avig.Ord.Internal;
 /// </summary>
 internal static class InlineReader
 {
+    /// <summary>How deep complex fields may nest. Word nests a few levels (an IF with a MERGEFIELD in it); 32 is far past that. EventReader stops at the same depth.</summary>
+    internal const int MaxFieldNesting = 32;
+
     public static List<Inline> Read(DocumentContext context, XElement paragraph, RunFormat inherited)
     {
         State state = new(context, inherited);
@@ -61,19 +64,19 @@ internal static class InlineReader
             }
             else if (name == names.Hyperlink)
             {
-                state.Begin();
+                List<Inline> link = state.Begin();
                 Walk(state, child, revision);
-                state.Add(new Hyperlink(state.Context, child, state.End()));
+                state.Add(new Hyperlink(state.Context, child, state.End(link)));
             }
             else if (name == names.SimpleField)
             {
-                state.Begin();
+                List<Inline> result = state.Begin();
                 Walk(state, child, revision);
-                state.Add(new Field(state.Context, child, child.Attribute(names.W + "instr")?.Value ?? string.Empty, state.End()));
+                state.Add(new Field(state.Context, child, child.Attribute(names.W + "instr")?.Value ?? string.Empty, state.End(result)));
             }
             else if (name == names.ContentControl)
             {
-                state.Begin();
+                List<Inline> controlled = state.Begin();
                 XElement? content = child.Element(names.ContentControlContent);
 
                 if (content is not null)
@@ -81,7 +84,7 @@ internal static class InlineReader
                     Walk(state, content, revision);
                 }
 
-                state.Add(new ContentControl(state.Context, child, state.End()));
+                state.Add(new ContentControl(state.Context, child, state.End(controlled)));
             }
             else if (name == names.Inserted || name == names.MoveTo)
             {
@@ -272,7 +275,12 @@ internal static class InlineReader
 
     private static string Symbol(WordNames names, XElement symbol)
     {
-        string? code = symbol.Attribute(names.W + "char")?.Value;
+        return Symbol(symbol.Attribute(names.W + "char")?.Value);
+    }
+
+    /// <summary>The character a w:sym stands for, from its hexadecimal w:char; empty when that is no character.</summary>
+    internal static string Symbol(string? code)
+    {
         string text = string.Empty;
 
         if (code is not null && int.TryParse(code, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int value) == true && value is > 0 and < 0x110000 and not (>= 0xD800 and <= 0xDFFF))
@@ -288,17 +296,22 @@ internal static class InlineReader
     {
         DocumentContext context = state.Context;
 
-        foreach (XElement textBox in drawing.Descendants().Where(element => element.Name.LocalName == "txbxContent").Take(16))
+        // What is inside a text box belongs to the box's own paragraphs: a text box or picture
+        // there is read when they are, in their revision view and table rows. Looking into the
+        // boxes too gave a nested box's text twice, and the text of rows the view leaves out.
+        List<XElement> outside = OutsideTextBoxes(drawing);
+
+        foreach (XElement textBox in outside.Where(element => element.Name.LocalName == "txbxContent").Take(16))
         {
             state.Add(new TextBox(context, textBox, Block.Read(context, textBox)));
         }
 
-        XElement? blip = drawing.Descendants().FirstOrDefault(element => element.Name.LocalName == "blip");
+        XElement? blip = outside.FirstOrDefault(element => element.Name.LocalName == "blip");
 
         if (blip is not null)
         {
-            XElement? extent = drawing.Descendants().FirstOrDefault(element => element.Name.LocalName == "extent");
-            XElement? properties = drawing.Descendants().FirstOrDefault(element => element.Name.LocalName == "docPr");
+            XElement? extent = outside.FirstOrDefault(element => element.Name.LocalName == "extent");
+            XElement? properties = outside.FirstOrDefault(element => element.Name.LocalName == "docPr");
             XElement? svg = blip.Descendants().FirstOrDefault(element => element.Name.LocalName == "svgBlip");
 
             state.Add(new Picture(
@@ -314,12 +327,42 @@ internal static class InlineReader
             return;
         }
 
-        XElement? image = drawing.Descendants().FirstOrDefault(element => element.Name.LocalName == "imagedata");
+        XElement? image = outside.FirstOrDefault(element => element.Name.LocalName == "imagedata");
 
         if (image is not null)
         {
             state.Add(new Picture(context, drawing, RelationshipAttribute(image, "id"), null, Length.Zero, Length.Zero, image.Attribute(XName.Get("title", "urn:schemas-microsoft-com:office:office"))?.Value ?? string.Empty, string.Empty));
         }
+    }
+
+    /// <summary>The elements under a drawing in document order, without going into a text box: a w:txbxContent is in the list, what it holds is not.</summary>
+    private static List<XElement> OutsideTextBoxes(XElement drawing)
+    {
+        List<XElement> found = [];
+        Stack<XElement> pending = new();
+
+        foreach (XElement child in drawing.Elements().Reverse())
+        {
+            pending.Push(child);
+        }
+
+        while (pending.Count > 0)
+        {
+            XElement element = pending.Pop();
+            found.Add(element);
+
+            if (element.Name.LocalName == "txbxContent")
+            {
+                continue;
+            }
+
+            foreach (XElement child in element.Elements().Reverse())
+            {
+                pending.Push(child);
+            }
+        }
+
+        return found;
     }
 
     private static string? RelationshipAttribute(XElement? element, string localName)
@@ -336,6 +379,8 @@ internal static class InlineReader
     {
         private readonly Stack<List<Inline>> targets = new();
         private readonly Stack<OpenField> fields = new();
+        private readonly HashSet<List<Inline>> closed = new(ReferenceEqualityComparer.Instance);
+        private int ignoredFields;
         private readonly RunFormat inherited;
 
         public State(DocumentContext context, RunFormat inherited)
@@ -349,21 +394,43 @@ internal static class InlineReader
 
         public List<Inline> Root { get; } = [];
 
-        public void Begin()
+        /// <summary>Starts the list of a container (a hyperlink, a simple field, a content control); <see cref="End"/> ends it.</summary>
+        public List<Inline> Begin()
         {
-            targets.Push([]);
+            List<Inline> list = [];
+            targets.Push(list);
+
+            return list;
         }
 
-        public List<Inline> End()
+        public List<Inline> End(List<Inline> list)
         {
-            List<Inline> list = targets.Pop();
-
-            // A field begun inside the container and not ended there writes into this list; it
-            // is closed with it, so that its inlines are not lost.
-            while (fields.Count > 0 && ReferenceEquals(fields.Peek().Parent, list) == true)
+            // Only a broken file can get here without the list on the stack; the root must stay.
+            if (targets.Contains(list) == false)
             {
-                Close();
+                return list;
             }
+
+            // A field begun inside the container and not ended there has its result above the
+            // container's list; it is closed with the container, so that its inlines are not lost.
+            while (targets.Count > 1 && ReferenceEquals(targets.Peek(), list) == false)
+            {
+                if (fields.Count > 0 && ReferenceEquals(targets.Peek(), fields.Peek().Result) == true)
+                {
+                    Close();
+                }
+                else
+                {
+                    closed.Remove(targets.Pop());
+                }
+            }
+
+            if (targets.Count > 1)
+            {
+                targets.Pop();
+            }
+
+            PopClosedResults();
 
             return list;
         }
@@ -400,6 +467,24 @@ internal static class InlineReader
 
         public void FieldChar(XElement run, string? type)
         {
+            // Fields nested deeper than MaxFieldNesting are read as part of the field they are in:
+            // their begin, separate and end are passed over. Twenty thousand fields begun in a row,
+            // each in the result of the one before, nested Field objects that deep, and reading
+            // their text ran out of stack; the XML itself is flat.
+            if (ignoredFields > 0 || (type == "begin" && fields.Count >= MaxFieldNesting))
+            {
+                if (type == "begin")
+                {
+                    ignoredFields++;
+                }
+                else if (type == "end")
+                {
+                    ignoredFields--;
+                }
+
+                return;
+            }
+
             switch (type)
             {
                 case "begin":
@@ -443,15 +528,19 @@ internal static class InlineReader
         {
             OpenField field = fields.Pop();
 
-            // Pop the field's result list, and anything left open inside it.
-            while (targets.Count > 1 && ReferenceEquals(targets.Peek(), field.Result) == false)
+            // A field that began before a container (a hyperlink, a content control) and ends
+            // inside it leaves the container open: what is left of the container still goes into
+            // the container, which is inside the field's result, and the result is taken off the
+            // stack when the container ends. Popping the container here put the rest of a
+            // hyperlink before its start, and then took the paragraph's own list off the stack.
+            if (ReferenceEquals(targets.Peek(), field.Result) == true)
             {
                 targets.Pop();
+                PopClosedResults();
             }
-
-            if (targets.Count > 1)
+            else if (targets.Contains(field.Result) == true)
             {
-                targets.Pop();
+                closed.Add(field.Result);
             }
 
             Field made = new(Context, field.Start, field.Instruction.ToString(), field.Result);
@@ -460,6 +549,15 @@ internal static class InlineReader
             if (insideInstruction == false)
             {
                 field.Parent.Add(made);
+            }
+        }
+
+        /// <summary>Takes the results of fields that have ended off the top of the stack, once the containers above them have ended.</summary>
+        private void PopClosedResults()
+        {
+            while (targets.Count > 1 && closed.Remove(targets.Peek()) == true)
+            {
+                targets.Pop();
             }
         }
 
