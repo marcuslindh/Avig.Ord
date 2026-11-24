@@ -54,6 +54,16 @@ dotnet test Avig.Ord.slnx
 - **Det som skrivs ska klara Microsofts schemavalidator** (`TestFiles.Validate`), i schemats
   ordning för barnelement (rPr, pPr, style …).
 - **Ett fel om en fil blir ett test** (`HostileFilesTests.cs`, `FuzzFindingsTests.cs`).
+- **README-exemplen är tester.** Skriv README i `README.template.md`, där `@@namn@@` står för
+  koden i `#region example: namn` i `tests/Avig.Ord.Tests/ReadmeExamples.cs`, och gör README.md
+  med `dotnet run tools/readme.cs`. `Every_README_example_is_code_that_runs_here` failar om de
+  skiljer sig. Ett nytt publikt API ska få ett exempel och en rad i "The API at a glance".
+- **Mallar och sök och ersätt går genom `ParagraphText`**, som ger styckets synliga text och
+  vilka w:t den kommer från, och `ReplaceIn`, som delar körningar och spårar ändringar. Gör inga
+  egna textsökningar i XML:en.
+- **Spårade ändringar:** allt som ändrar innehåll frågar `Context.Owner?.Tracker` och märker då
+  det nya som infogat och det gamla som borttaget (`Tracking`). Kopior görs rena med
+  `Revisions.Accept` innan de märks, så att revisions-id inte dubbleras.
 
 ## Konventioner
 
