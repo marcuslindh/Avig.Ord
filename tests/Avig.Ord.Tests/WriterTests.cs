@@ -14,7 +14,7 @@ public class WriterTests
     {
         byte[] file = await EveryFeatureAsync(false);
 
-        Assert.Equal(string.Empty, TestFiles.Validate(file));
+        TestFiles.AssertValid(file);
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class WriterTests
 
         byte[] file = await TestFiles.SaveAsync(document);
 
-        Assert.Equal(string.Empty, TestFiles.Validate(file));
+        TestFiles.AssertValid(file);
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class WriterTests
         }
 
         byte[] bytes = file.ToArray();
-        Assert.Equal(string.Empty, TestFiles.Validate(bytes));
+        TestFiles.AssertValid(bytes);
         OrdDocument document = await TestFiles.OpenAsync(bytes);
         Picture picture = Assert.Single(document.AllPictures());
         Assert.EndsWith(".png", picture.PartName, StringComparison.Ordinal);

@@ -5,11 +5,20 @@ namespace Avig.Ord;
 
 public abstract partial class Block
 {
-    /// <summary>Takes the block out of the document.</summary>
+    /// <summary>Takes the block out of the document; while changes are tracked, marks it deleted instead.</summary>
     /// <exception cref="InvalidOperationException">The block was read with <see cref="DocxReader"/>.</exception>
     public void Remove()
     {
         Context.ThrowIfReadOnly();
+
+        if (Context.Owner?.Tracker is Tracking tracking)
+        {
+            tracking.DeleteBlock(Context.Names, Element);
+            Context.Changed();
+
+            return;
+        }
+
         XElement? parent = Element.Parent;
         Element.Remove();
 
@@ -73,7 +82,10 @@ public abstract partial class Block
         IContentSink sink = Context.Owner!.SinkFor(Context);
         XElement element = builder.Build(sink, sink.TextWidth);
         Element.AddAfterSelf(element);
-        element.AddAfterSelf(new XElement(Context.Names.Paragraph));
+        XElement separator = new(Context.Names.Paragraph);
+        element.AddAfterSelf(separator);
+        Context.Owner.Tracker?.InsertBlock(Context.Names, element);
+        Context.Owner.Tracker?.InsertBlock(Context.Names, separator);
         Context.Changed();
 
         return new Table(Context, element);
@@ -85,8 +97,10 @@ public abstract partial class Block
         Context.ThrowIfReadOnly();
         ParagraphBuilder builder = new();
         build(builder);
+        XElement element = builder.Build(Context.Owner!.SinkFor(Context));
+        Context.Owner.Tracker?.InsertBlock(Context.Names, element);
 
-        return builder.Build(Context.Owner!.SinkFor(Context));
+        return element;
     }
 }
 
@@ -109,6 +123,7 @@ public sealed partial class Paragraph
 
         XElement run = ContentXml.Run(Context.Owner!.SinkFor(Context), text, runStyle);
         Element.Add(run);
+        Context.Owner.Tracker?.Insert(Context.Names, [run]);
         Context.Changed();
 
         return new Run(Context, run, text, RevisionKind.None, InheritedRunFormat);
@@ -125,15 +140,23 @@ public sealed partial class Paragraph
         Context.ThrowIfReadOnly();
         WordNames names = Context.Names;
         XElement? firstProperties = Element.Descendants(names.Run).Select(run => run.Element(names.RunProperties)).FirstOrDefault(properties => properties is not null);
+        Tracking? tracking = Context.Owner?.Tracker;
 
-        foreach (XNode node in Element.Nodes().ToList())
+        if (tracking is not null)
         {
-            if (node is XElement element && element.Name == names.ParagraphProperties)
+            tracking.Delete(names, [.. Element.Descendants(names.Run).Where(run => run.Ancestors(names.Paragraph).FirstOrDefault() == Element)]);
+        }
+        else
+        {
+            foreach (XNode node in Element.Nodes().ToList())
             {
-                continue;
-            }
+                if (node is XElement element && element.Name == names.ParagraphProperties)
+                {
+                    continue;
+                }
 
-            node.Remove();
+                node.Remove();
+            }
         }
 
         XElement replacement = new(names.Run);
@@ -145,6 +168,7 @@ public sealed partial class Paragraph
 
         ContentXml.AddText(names, replacement, text);
         Element.Add(replacement);
+        tracking?.Insert(names, [replacement]);
         Context.Changed();
     }
 
@@ -247,18 +271,31 @@ public sealed partial class TableRow
         Context.ThrowIfReadOnly();
         XElement copy = new(Element);
         copy.Element(Context.Names.TableRowProperties)?.Element(Context.Names.W + "tblHeader")?.Remove();
+
+        // The copy is the row as it reads now; the original's tracked changes, and their ids, are not copied.
+        Revisions.Accept(Context.Names, copy);
         Element.AddAfterSelf(copy);
+        Context.Owner?.Tracker?.InsertBlock(Context.Names, copy);
         Context.Changed();
 
         return new TableRow(Context, copy, Table);
     }
 
-    /// <summary>Takes the row out of its table.</summary>
+    /// <summary>Takes the row out of its table; while changes are tracked, marks it deleted instead.</summary>
     /// <exception cref="InvalidOperationException">The row was read with <see cref="DocxReader"/>.</exception>
     public void Remove()
     {
         Context.ThrowIfReadOnly();
-        Element.Remove();
+
+        if (Context.Owner?.Tracker is Tracking tracking)
+        {
+            tracking.DeleteBlock(Context.Names, Element);
+        }
+        else
+        {
+            Element.Remove();
+        }
+
         Context.Changed();
     }
 }
@@ -277,7 +314,9 @@ public sealed partial class TableCell
 
         if (first?.Element(names.ParagraphProperties) is XElement properties)
         {
-            paragraph.Add(new XElement(properties));
+            XElement copy = new(properties);
+            Revisions.Accept(names, copy);
+            paragraph.Add(copy);
         }
 
         XElement? runProperties = first?.Descendants(names.Run).Select(run => run.Element(names.RunProperties)).FirstOrDefault(found => found is not null);
@@ -290,13 +329,22 @@ public sealed partial class TableCell
 
         ContentXml.AddText(names, run, text);
         paragraph.Add(run);
+        Tracking? tracking = Context.Owner?.Tracker;
 
         foreach (XElement block in Element.Elements().Where(element => element.Name != names.TableCellProperties).ToList())
         {
-            block.Remove();
+            if (tracking is null)
+            {
+                block.Remove();
+            }
+            else
+            {
+                tracking.DeleteBlock(names, block);
+            }
         }
 
         Element.Add(paragraph);
+        tracking?.InsertBlock(names, paragraph);
         Context.Changed();
     }
 }

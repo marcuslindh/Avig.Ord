@@ -79,6 +79,14 @@ internal static class TestFiles
         return string.Join('\n', errors.Select(error => $"{error.Part?.Uri} {error.Path?.XPath}: {error.Description}"));
     }
 
+    /// <summary>Fails with every error Microsoft's validator finds.</summary>
+    public static void AssertValid(byte[] file)
+    {
+        string errors = Validate(file);
+
+        Assert.True(errors.Length == 0, errors);
+    }
+
     /// <summary>The body's text as the Open XML SDK reads it, paragraph by paragraph.</summary>
     public static string SdkText(byte[] file)
     {

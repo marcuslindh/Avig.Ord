@@ -171,6 +171,7 @@ public sealed partial class OrdDocument
             body.Add(element);
         }
 
+        tracking?.InsertBlock(MainContext.Names, element);
         MainContext.Changed();
     }
 

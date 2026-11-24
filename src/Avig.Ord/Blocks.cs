@@ -39,7 +39,10 @@ public abstract partial class Block
         {
             if (child.Name == names.Paragraph)
             {
-                blocks.Add(new Paragraph(context, child));
+                if (IsGoneInView(context, child) == false)
+                {
+                    blocks.Add(new Paragraph(context, child));
+                }
             }
             else if (child.Name == names.Table)
             {
@@ -51,6 +54,43 @@ public abstract partial class Block
                 Collect(context, inner, blocks, depth + 1);
             }
         }
+    }
+
+    /// <summary>
+    /// True for a paragraph that is not there in the view: one deleted with tracked changes
+    /// (its mark and all its runs deleted) read as Accepted, or one inserted read as Original.
+    /// A paragraph whose mark alone was deleted, which Word joins with the next one, is kept as
+    /// a paragraph of its own.
+    /// </summary>
+    private static bool IsGoneInView(DocumentContext context, XElement paragraph)
+    {
+        WordNames names = context.Names;
+        XElement? mark = paragraph.Element(names.ParagraphProperties)?.Element(names.RunProperties);
+        XName? revision = null;
+
+        if (context.View == RevisionView.Accepted && mark?.Element(names.Deleted) is not null)
+        {
+            revision = names.Deleted;
+        }
+        else if (context.View == RevisionView.Original && mark?.Element(names.Inserted) is not null)
+        {
+            revision = names.Inserted;
+        }
+
+        if (revision is null)
+        {
+            return false;
+        }
+
+        XName moved = names.MoveFrom;
+
+        if (revision == names.Inserted)
+        {
+            moved = names.MoveTo;
+        }
+
+        // Gone when no run is left outside the revision of that kind.
+        return paragraph.Descendants(names.Run).All(run => run.Ancestors().TakeWhile(ancestor => ancestor != paragraph).Any(ancestor => ancestor.Name == revision || ancestor.Name == moved) == true);
     }
 
     /// <summary>Elements whose paragraphs count as the container's own: a block content control, custom XML, and an inserted or deleted block range as the view has it.</summary>

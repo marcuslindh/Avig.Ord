@@ -116,7 +116,7 @@ public class ReaderTests
             string xml = Encoding.UTF8.GetString(await PartAsync(saved, "word/document.xml"));
             Assert.DoesNotContain("w:ins", xml, StringComparison.Ordinal);
             Assert.DoesNotContain("w:del", xml, StringComparison.Ordinal);
-            Assert.Equal(string.Empty, TestFiles.Validate(saved));
+            TestFiles.AssertValid(saved);
         }
     }
 
@@ -317,7 +317,7 @@ public class ReaderTests
 
         Assert.Equal(await PartAsync(file, "word/media/image1.png"), await PartAsync(saved, "word/media/image1.png"));
         Assert.Equal(await PartAsync(file, "word/settings.xml"), await PartAsync(saved, "word/settings.xml"));
-        Assert.Equal(string.Empty, TestFiles.Validate(saved));
+        TestFiles.AssertValid(saved);
     }
 
     [Fact]
