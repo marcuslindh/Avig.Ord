@@ -1,0 +1,61 @@
+{
+  "Body": [
+    {
+      "Label": "",
+      "Text": "Bilder av Word"
+    },
+    {
+      "Label": "",
+      "Text": "En bild: "
+    },
+    {
+      "Label": "",
+      "Text": "En SVG: "
+    },
+    {
+      "Label": "",
+      "Text": "Symbol: ("
+    },
+    {
+      "Label": "",
+      "Text": "Hårt bindestreck: ett‑två"
+    },
+    {
+      "Label": "",
+      "Text": "Tabb:\tefter, radbrytning:\nefter"
+    }
+  ],
+  "Accepted": [
+    {
+      "Label": "",
+      "Text": "Bilder av Word"
+    },
+    {
+      "Label": "",
+      "Text": "En bild: "
+    },
+    {
+      "Label": "",
+      "Text": "En SVG: "
+    },
+    {
+      "Label": "",
+      "Text": "Symbol: ("
+    },
+    {
+      "Label": "",
+      "Text": "Hårt bindestreck: ett‑två"
+    },
+    {
+      "Label": "",
+      "Text": "Tabb:\tefter, radbrytning:\nefter"
+    }
+  ],
+  "Pictures": 2,
+  "Headers": [],
+  "Footers": [],
+  "Footnotes": [],
+  "Endnotes": [],
+  "Comments": [],
+  "TextBoxes": []
+}

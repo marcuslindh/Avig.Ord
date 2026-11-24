@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0-windows7.0": {
+      "Avig.Analyzers": {
+        "type": "Direct",
+        "requested": "[1.2.0, )",
+        "resolved": "1.2.0",
+        "contentHash": "dnpDYQFgf2MP3lUiJFeU63kvHIEUXzeeNSMUmnwjtv9owVDei59aI8MYFdZL8dUcwUBE3Tr3QllcQoImMWOsTA=="
+      },
+      "Avig.OpenXml": {
+        "type": "Transitive",
+        "resolved": "0.1.2",
+        "contentHash": "kBrdGsgvs1goQSd1/aT4bwJn1eUyDVxS8hxcKMv2ZvZCqe8f+piyHXt7Je50gYBB5e/+jnSWSyHw1N7Ev+lj9g==",
+        "dependencies": {
+          "Avig.Result": "1.0.2"
+        }
+      },
+      "Avig.Result": {
+        "type": "Transitive",
+        "resolved": "1.0.2",
+        "contentHash": "CUYoKrg/M0mrRFn83f7rNwN5ieGhdrV0IYMF7qpC2+/sukP7z238YO/yY84hQ3iuhC8Qau+H2M4EjiO9+/M3dQ=="
+      },
+      "avig.ord": {
+        "type": "Project",
+        "dependencies": {
+          "Avig.OpenXml": "[0.1.2, )",
+          "Avig.Result": "[1.0.2, )"
+        }
+      }
+    }
+  }
+}

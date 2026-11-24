@@ -1,0 +1,43 @@
+{
+  "Body": [
+    {
+      "Label": "",
+      "Text": "Kommenterad text."
+    },
+    {
+      "Label": "",
+      "Text": "Text med fotnot"
+    },
+    {
+      "Label": "",
+      "Text": "Text med slutnot"
+    }
+  ],
+  "Accepted": [
+    {
+      "Label": "",
+      "Text": "Kommenterad text."
+    },
+    {
+      "Label": "",
+      "Text": "Text med fotnot"
+    },
+    {
+      "Label": "",
+      "Text": "Text med slutnot"
+    }
+  ],
+  "Pictures": 0,
+  "Headers": [],
+  "Footers": [],
+  "Footnotes": [
+    "Källa: SCB."
+  ],
+  "Endnotes": [
+    "Slutnoten."
+  ],
+  "Comments": [
+    "Stämmer detta?"
+  ],
+  "TextBoxes": []
+}

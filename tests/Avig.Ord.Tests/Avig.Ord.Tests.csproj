@@ -29,4 +29,12 @@
     <ProjectReference Include="..\..\src\Avig.Ord.Generators\Avig.Ord.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Documents Word made, with Word's own reading of them (tools/Avig.Ord.WordCheck create). -->
+    <None Include="WordFiles\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The comparison is the one the Word check uses, so that the two cannot drift apart. -->
+    <Compile Include="..\..\tools\Avig.Ord.WordCheck\Report.cs" Link="WordCheck\Report.cs" />
+    <Compile Include="..\..\tools\Avig.Ord.WordCheck\OrdSide.cs" Link="WordCheck\OrdSide.cs" />
+  </ItemGroup>
+
 </Project>

@@ -107,3 +107,48 @@ internal static class WordXml
         return buffer.ToArray();
     }
 }
+
+/// <summary>Opens the package of a Word file through Avig.OpenXml.</summary>
+internal static class WordPackage
+{
+    /// <summary>Opens a file.</summary>
+    public static async Task<Result<OpcPackage>> OpenAsync(string path, OpcOpenOptions options, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await OpcPackage.OpenAsync(path, options, cancellationToken);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Damaged(exception);
+        }
+    }
+
+    /// <summary>Opens a stream.</summary>
+    public static async Task<Result<OpcPackage>> OpenAsync(Stream input, OpcOpenOptions options, bool leaveOpen, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await OpcPackage.OpenAsync(input, options, leaveOpen, cancellationToken);
+        }
+        catch (InvalidOperationException exception)
+        {
+            if (leaveOpen == false)
+            {
+                await input.DisposeAsync();
+            }
+
+            return Damaged(exception);
+        }
+    }
+
+    /// <summary>
+    /// Avig.OpenXml 0.1.2 throws InvalidOperationException (from its XmlWriter) for a Flat OPC
+    /// pkg:xmlData that holds more than one element, instead of giving Invalid. Until that is
+    /// fixed there, it is a damaged file here (FuzzFindingsTests).
+    /// </summary>
+    private static Result<OpcPackage> Damaged(InvalidOperationException exception)
+    {
+        return Result<OpcPackage>.Invalid($"{OpcErrors.DamagedPrefix}: a part of the Flat OPC file is not one XML element ({exception.Message}).");
+    }
+}

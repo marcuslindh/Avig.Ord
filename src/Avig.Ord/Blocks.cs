@@ -242,7 +242,7 @@ public sealed partial class Table : Block
                 return grid;
             }
 
-            return Rows.Select(row => row.Cells.Sum(cell => cell.ColumnSpan)).DefaultIfEmpty(0).Max();
+            return Rows.Select(row => SpannedColumns(row)).DefaultIfEmpty(0).Max();
         }
     }
 
@@ -251,6 +251,19 @@ public sealed partial class Table : Block
 
     /// <summary>The cells separated by tabs and the rows by line breaks.</summary>
     public override string Text => string.Join('\n', Rows.Select(row => string.Join('\t', row.Cells.Select(cell => cell.Text))));
+
+    /// <summary>The grid columns a row's cells span together, added up without overflow (Enumerable.Sum throws).</summary>
+    internal static int SpannedColumns(TableRow row)
+    {
+        long columns = 0;
+
+        foreach (TableCell cell in row.Cells)
+        {
+            columns += cell.ColumnSpan;
+        }
+
+        return (int)Math.Min(columns, int.MaxValue);
+    }
 }
 
 /// <summary>A row of a table.</summary>
@@ -352,8 +365,11 @@ public sealed partial class TableCell
     /// <summary>The cell's paragraphs' text, separated by line breaks.</summary>
     public string Text => string.Join('\n', Blocks.Select(block => block.Text));
 
-    /// <summary>How many grid columns the cell spans; 1 unless it is merged across.</summary>
-    public int ColumnSpan => Math.Max(FormatReader.Integer(Context.Names.ValueOf(Properties, "gridSpan")) ?? 1, 1);
+    /// <summary>How many grid columns the cell spans; 1 unless it is merged across. At most 63, the most columns Word lets a table have.</summary>
+    public int ColumnSpan => Math.Clamp(FormatReader.Integer(Context.Names.ValueOf(Properties, "gridSpan")) ?? 1, 1, MaxColumns);
+
+    /// <summary>The most columns a table can have in Word. A larger gridSpan in a file overflowed a sum of spans, and made Markdown write that many empty cells.</summary>
+    internal const int MaxColumns = 63;
 
     /// <summary>How the cell takes part in a vertical merge.</summary>
     public VerticalMerge VerticalMerge

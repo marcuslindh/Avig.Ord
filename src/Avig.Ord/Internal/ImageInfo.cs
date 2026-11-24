@@ -26,7 +26,8 @@ internal static partial class ImageInfo
         else if (data.Length >= 26 && data.StartsWith("BM"u8) == true)
         {
             width = BinaryPrimitives.ReadInt32LittleEndian(data[18..]);
-            height = Math.Abs(BinaryPrimitives.ReadInt32LittleEndian(data[22..]));
+            // A negative height is a top-down bitmap. Through long, so that int.MinValue does not overflow.
+            height = (int)Math.Min(Math.Abs((long)BinaryPrimitives.ReadInt32LittleEndian(data[22..])), int.MaxValue);
         }
         else if (data.Length >= 4 && data[0] == 0xFF && data[1] == 0xD8)
         {

@@ -149,7 +149,7 @@ public sealed partial class OrdDocument
     public static async Task<Result<OrdDocument>> OpenAsync(string path, ReadOptions? options = null, CancellationToken cancellationToken = default)
     {
         options ??= ReadOptions.Default;
-        Result<OpcPackage> opened = await OpcPackage.OpenAsync(path, options.Limits.ToOpenOptions(), cancellationToken);
+        Result<OpcPackage> opened = await WordPackage.OpenAsync(path, options.Limits.ToOpenOptions(), cancellationToken);
 
         return await LoadAsync(opened, options, cancellationToken);
     }
@@ -163,7 +163,7 @@ public sealed partial class OrdDocument
     {
         ArgumentNullException.ThrowIfNull(input);
         options ??= ReadOptions.Default;
-        Result<OpcPackage> opened = await OpcPackage.OpenAsync(input, options.Limits.ToOpenOptions(), true, cancellationToken);
+        Result<OpcPackage> opened = await WordPackage.OpenAsync(input, options.Limits.ToOpenOptions(), true, cancellationToken);
 
         return await LoadAsync(opened, options, cancellationToken);
     }
@@ -489,7 +489,19 @@ public sealed partial class OrdDocument
             if (name.EndsWith(".rels", StringComparison.OrdinalIgnoreCase) == true && name.Contains("_rels/", StringComparison.OrdinalIgnoreCase) == true)
             {
                 string source = SourceOfRelationships(name);
-                relationships[source] = [.. await package.GetRelationshipsAsync(source, cancellationToken)];
+                List<OpcRelationship> list = [.. await package.GetRelationshipsAsync(source, cancellationToken)];
+                HashSet<string> ids = new(StringComparer.Ordinal);
+
+                // Two relationships with one id cannot be told apart, and cannot be saved.
+                foreach (OpcRelationship relationship in list)
+                {
+                    if (ids.Add(relationship.Id) == false)
+                    {
+                        return Result<OrdDocument>.Invalid($"{OpcErrors.DamagedPrefix}: the relationships of '{source}' have the id '{relationship.Id}' twice.");
+                    }
+                }
+
+                relationships[source] = list;
 
                 continue;
             }
@@ -508,6 +520,15 @@ public sealed partial class OrdDocument
             }
         }
 
+        // Every XML part is read through once now, with the file's limits, so that broken XML
+        // anywhere is found when the file is opened: the model loads the other parts only when
+        // they are asked for (the styles, a header), and a Flat OPC save writes every XML part
+        // as XML. Without this, OpenAsync succeeded and Headers or SaveAsync threw XmlException.
+        foreach (PartData part in parts.Values)
+        {
+            CheckXml(part, options.Limits.MaxXmlDepth, cancellationToken);
+        }
+
         OrdDocument document = new(options, mainPart, parts, order, relationships);
 
         // Load the main part now, so that broken XML in it is found when the file is opened.
@@ -515,6 +536,34 @@ public sealed partial class OrdDocument
         parts[mainPart].Dirty = false;
 
         return document;
+    }
+
+    /// <summary>
+    /// Reads an XML part through without keeping it, and throws <see cref="XmlException"/> (or
+    /// <see cref="InvalidDataException"/> past the depth limit) when it is broken. An empty part
+    /// is broken only when it is one of the parts the model reads as XML; any other empty part
+    /// is saved as it is.
+    /// </summary>
+    private static void CheckXml(PartData part, int maxDepth, CancellationToken cancellationToken)
+    {
+        string type = part.ContentType;
+        bool xml = type.EndsWith("+xml", StringComparison.OrdinalIgnoreCase) == true || type.EndsWith("/xml", StringComparison.OrdinalIgnoreCase) == true;
+        bool word = type.StartsWith("application/vnd.openxmlformats-officedocument.wordprocessingml.", StringComparison.OrdinalIgnoreCase) == true
+            || WordTypes.IsMainContentType(type) == true
+            || string.Equals(type, OpcNamespaces.CorePropertiesContentType, StringComparison.OrdinalIgnoreCase) == true;
+
+        if (xml == false || (part.Data.Length == 0 && word == false))
+        {
+            return;
+        }
+
+        using MemoryStream stream = new(part.Data, false);
+        using XmlReader reader = OpcXml.CreateReader(stream, maxDepth);
+
+        while (reader.Read() == true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+        }
     }
 
     /// <summary>The part whose relationships a .rels part holds: word/_rels/document.xml.rels is word/document.xml's, _rels/.rels the package's.</summary>

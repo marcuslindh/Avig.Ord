@@ -61,7 +61,7 @@ public sealed class DocxReader : IAsyncDisposable
     public static async Task<Result<DocxReader>> OpenAsync(string path, ReadOptions? options = null, CancellationToken cancellationToken = default)
     {
         options ??= ReadOptions.Default;
-        Result<OpcPackage> opened = await OpcPackage.OpenAsync(path, options.Limits.ToOpenOptions(), cancellationToken);
+        Result<OpcPackage> opened = await WordPackage.OpenAsync(path, options.Limits.ToOpenOptions(), cancellationToken);
 
         return await StartAsync(opened, options, cancellationToken);
     }
@@ -76,7 +76,7 @@ public sealed class DocxReader : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(input);
         options ??= ReadOptions.Default;
-        Result<OpcPackage> opened = await OpcPackage.OpenAsync(input, options.Limits.ToOpenOptions(), leaveOpen, cancellationToken);
+        Result<OpcPackage> opened = await WordPackage.OpenAsync(input, options.Limits.ToOpenOptions(), leaveOpen, cancellationToken);
 
         return await StartAsync(opened, options, cancellationToken);
     }
@@ -150,7 +150,14 @@ public sealed class DocxReader : IAsyncDisposable
             TextRenderer.Write(text, [block], TextOptions.Default, 0);
         }
 
-        return text.ToString().TrimEnd('\n');
+        // As TextRenderer.Render: only the last paragraph's own line end goes, so that an empty
+        // last paragraph, or a line break at the end, reads as in OrdDocument.ToPlainText.
+        if (text.Length > 0 && text[^1] == '\n')
+        {
+            text.Length--;
+        }
+
+        return text.ToString();
     }
 
     /// <summary>The whole body as Markdown, written to <paramref name="output"/> block by block.</summary>
@@ -158,27 +165,17 @@ public sealed class DocxReader : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(output);
         options ??= MarkdownOptions.Default;
-        List<Block> pending = [];
+
+        // One renderer for the whole body, so that it knows what came before as the document
+        // model's ToMarkdown does: an empty paragraph between two list items used to end the list.
+        MarkdownRenderer renderer = MarkdownRenderer.ForStream(options);
 
         await foreach (Block block in ReadBlocksAsync(cancellationToken))
         {
-            // A list is written together, so that its items are not separated by blank lines.
-            pending.Add(block);
-
-            if (block is Paragraph { List: not null })
-            {
-                continue;
-            }
-
-            await output.WriteAsync(MarkdownRenderer.Render(pending, options).AsMemory(), cancellationToken);
-            await output.WriteAsync("\n".AsMemory(), cancellationToken);
-            pending.Clear();
+            await output.WriteAsync(renderer.Next(block).AsMemory(), cancellationToken);
         }
 
-        if (pending.Count > 0)
-        {
-            await output.WriteAsync(MarkdownRenderer.Render(pending, options).AsMemory(), cancellationToken);
-        }
+        await output.WriteAsync(MarkdownRenderer.Finish().AsMemory(), cancellationToken);
     }
 
     /// <summary>

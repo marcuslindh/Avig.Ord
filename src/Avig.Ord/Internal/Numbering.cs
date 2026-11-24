@@ -123,6 +123,9 @@ internal sealed class NumberingDefinitions
 /// </summary>
 internal sealed class ListCounter
 {
+    /// <summary>The largest number written in letters: Word takes no start above 32 767.</summary>
+    private const int MaxLetterNumber = 32_767;
+
     private readonly NumberingDefinitions definitions;
     private readonly Dictionary<string, int[]> counters = new(StringComparer.Ordinal);
     private readonly HashSet<string> restarted = new(StringComparer.Ordinal);
@@ -236,12 +239,18 @@ internal sealed class ListCounter
         };
     }
 
-    /// <summary>a … z, then aa … zz, as Word counts letters.</summary>
+    /// <summary>a … z, then aa … zz, as Word counts letters. Past 32 767, the largest start Word takes, the number in digits.</summary>
     private static string Letters(int number, char first)
     {
         if (number <= 0)
         {
             return string.Empty;
+        }
+
+        // A start of int.MaxValue in a file made an 82-million-letter label for every item.
+        if (number > MaxLetterNumber)
+        {
+            return number.ToString(CultureInfo.InvariantCulture);
         }
 
         char letter = (char)(first + ((number - 1) % 26));

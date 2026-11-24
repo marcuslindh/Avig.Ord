@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Windows only: Word is driven through COM. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Avig.Ord.WordCheck</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <!-- Late-bound COM through dynamic; Microsoft.CSharp is part of the shared framework. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Avig.Ord\Avig.Ord.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Avig" />
+    <Using Include="Avig.Ord" />
+  </ItemGroup>
+
+</Project>

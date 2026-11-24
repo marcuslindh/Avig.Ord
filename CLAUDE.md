@@ -16,7 +16,33 @@ Avig.Kalkyl (`G:\OneDrive\SkunkWorks\Prod\Lib\Avig.Kalkyl`), som det följer i a
 dotnet build Avig.Ord.slnx
 dotnet test Avig.Ord.slnx
 ./publish.ps1                 # testar, packar, formkontrollerar, lägger i G:\LocalNugetRepo
+
+# Fuzzning (tools/Avig.Ord.Fuzz, se dess README)
+dotnet run --project tools/Avig.Ord.Fuzz -c Release -- all --smoke
+
+# Riktiga Word (Windows med Word installerat)
+dotnet run --project tools/Avig.Ord.WordCheck -- all      # create + check
 ```
+
+`tools/Avig.Ord.Fuzz` är en SharpFuzz-harness som Avig.Kalkyl.Fuzz, och den ingår inte i
+paketet. Tio mål: delar av en docx från `DocxWriter` som byts ut (`docx-part`), zip-bytes
+(`zip-raw`), Flat OPC (`flat-opc`), öppna–spara–öppna med schemavalidering (`roundtrip`),
+genererade kroppar (`render`, `events`, `reader-model`, `revisions`) och de små tolkarna
+(`image-size`, `format`). Ett fynd är ett undantag utöver de dokumenterade, en avvisning utan
+`OrdErrorKind`, en hängning eller ett fel svar. Kör smoke-läget efter ändringar i läsarna,
+`InlineReader`, `EventReader`, renderarna, sparningen eller `FormatReader`. Ett fynd blir ett
+regressionstest i `FuzzFindingsTests.cs`, och ett nytt mål ska vara verifierat genom sabotage
+(tabellen i README:n). Ett känt fel i Avig.OpenXml (Flat OPC-skrivarens djupgräns 100) räknas
+som `Known` och sparas som zip i stället.
+
+`tools/Avig.Ord.WordCheck` styr Word via COM (sen bindning med `dynamic`). `create` låter Word
+göra dokument med riktiga Word-funktioner och sparar dem med Words egen läsning (.json) i
+`tests/Avig.Ord.Tests/WordFiles`, som `WordFilesTests` läser; kör det igen och checka in om
+filerna ska ändras. `check` skriver dokument med paketet på alla sätt (DocxWriter, Create,
+öppnad–ändrad–sparad, Flat OPC, mall, Word-filerna sparade om), öppnar dem i Word utan
+reparation och jämför texten. Kör det efter ändringar i skrivaren, byggarna eller sparningen.
+Jämförelsens regler (`Report.cs`, `OrdSide.cs`) länkas in i testerna. Testplanen är
+`docs/testplan.md`.
 
 ## Arkitektur i korthet
 
@@ -64,6 +90,14 @@ dotnet test Avig.Ord.slnx
 - **Spårade ändringar:** allt som ändrar innehåll frågar `Context.Owner?.Tracker` och märker då
   det nya som infogat och det gamla som borttaget (`Tracking`). Kopior görs rena med
   `Revisions.Accept` innan de märks, så att revisions-id inte dubbleras.
+- **När `OpenAsync` har lyckats får inget kasta.** Varje XML-del läses igenom vid öppning, även
+  de som modellen laddar senare. Det som filen styr och som inte begränsas av XML-djupet har en
+  egen gräns: fält nästlas högst `InlineReader.MaxFieldNesting` (32), `gridSpan` och
+  Markdown-tabeller högst 63 kolumner, bokstavsetiketter högst 32 767. Nya id:n tas med
+  `OrdDocument.NextFreeId`, aldrig största plus ett.
+- **`DocxReader` ska ge samma svar som `OrdDocument`**: block, listetiketter, klartext, Markdown
+  och händelsernas stycketext (`EventReader` följer `InlineReader`:s regler för fält, rader och
+  textrutor). Fuzzmålet `reader-model` kontrollerar det.
 
 ## Konventioner
 

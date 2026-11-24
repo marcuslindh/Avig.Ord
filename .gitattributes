@@ -9,3 +9,4 @@
 *.snk binary
 *.nupkg binary
 
+tools/Avig.Ord.Fuzz/corpus/** binary
