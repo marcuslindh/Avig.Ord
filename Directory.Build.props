@@ -1,0 +1,42 @@
+<Project>
+
+  <!-- Shared metadata for the library and the tests. -->
+  <PropertyGroup>
+    <Authors>Marcus Lindh</Authors>
+    <Company>Marcus Lindh</Company>
+    <Copyright>Copyright (c) 2026 Marcus Lindh</Copyright>
+    <NeutralLanguage>sv</NeutralLanguage>
+    <RepositoryUrl>https://github.com/marcuslindh/Avig.Ord</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/marcuslindh/Avig.Ord</PackageProjectUrl>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- Supply chain (docs/testplan.md, DEP-01): every package, transitive ones too, is checked
+       against known vulnerabilities at restore, and with TreatWarningsAsErrors a finding fails
+       the build. The lock files pin every version; CI restores in locked mode, so a changed
+       dependency cannot slip in without a change to a lock file. -->
+  <PropertyGroup>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</RestoreLockedMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Build-time rules, not a dependency of the package. publish.ps1 fails if anything but
+         Avig.Result makes it into the nuspec. -->
+    <PackageReference Include="Avig.Analyzers" Version="1.2.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

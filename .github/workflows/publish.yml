@@ -1,0 +1,100 @@
+# Publishes Avig.Ord to nuget.org when a v-tag is pushed.
+#
+# No API key is stored anywhere. The job asks GitHub for a short-lived OIDC token,
+# nuget.org validates it against the Trusted Publishing policy registered for this
+# repo and hands back a temporary key that is valid for one hour. That is why the
+# login step comes last, right before the push: requested early in a long job, the key
+# could expire before it is used.
+#
+# The policy on nuget.org names this file by its file name only - publish.yml, not
+# .github/workflows/publish.yml. Renaming the file stops publishing until the policy
+# has been updated to match.
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    permissions:
+      contents: read
+      # Lets the job create the OIDC token that nuget.org exchanges for a temporary key.
+      id-token: write
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          # SourceLink writes the commit into the nuspec and the embedded symbols point
+          # back to it, so the build needs real history and not a shallow clone.
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Verify the tag matches the package version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          $csproj = Get-Content 'src/Avig.Ord/Avig.Ord.csproj' -Raw
+          $version = ([regex]'<Version>([^<]+)</Version>').Match($csproj).Groups[1].Value
+          $tag = $env:TAG -replace '^v', ''
+
+          if ($version -ne $tag) {
+              throw "Tag '$($env:TAG)' resolves to $tag but the csproj says $version. Nothing was published."
+          }
+
+          Write-Host "Tag and package version agree on $version"
+
+      - name: Test, pack and check the package shape
+        shell: pwsh
+        run: ./publish.ps1 -NoBump -Feed "${{ runner.temp }}/feed"
+
+      - name: Locate the package
+        id: package
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem 'src/Avig.Ord/bin/Release/*.nupkg' | Select-Object -First 1
+          if (-not $package) {
+              throw 'publish.ps1 produced no .nupkg.'
+          }
+
+          "path=$($package.FullName)" >> $env:GITHUB_OUTPUT
+          "name=$($package.BaseName)" >> $env:GITHUB_OUTPUT
+
+      - name: Keep the package as a build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: ${{ steps.package.outputs.path }}
+          if-no-files-found: error
+
+      - name: Exchange the OIDC token for a temporary NuGet key
+        uses: NuGet/login@v1
+        id: login
+        with:
+          # The profile name on nuget.org, not the email address. Kept as a secret on the
+          # NuGet documentation's recommendation; it is not a credential in itself.
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to nuget.org
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+          PACKAGE: ${{ steps.package.outputs.path }}
+        run: |
+          dotnet nuget push $env:PACKAGE `
+              --api-key $env:NUGET_API_KEY `
+              --source https://api.nuget.org/v3/index.json

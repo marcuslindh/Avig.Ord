@@ -1,0 +1,11 @@
+# Radsluten ska inte lamnas till den enskilda maskinens core.autocrlf - ett paket som
+# byggs likadant overallt ska ocksa se likadant ut i diffen overallt.
+* text=auto eol=crlf
+
+*.sh text eol=lf
+
+*.png binary
+*.jpg binary
+*.snk binary
+*.nupkg binary
+

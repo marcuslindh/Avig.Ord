@@ -1,0 +1,50 @@
+root = true
+
+[*]
+end_of_line = crlf
+insert_final_newline = true
+charset = utf-8
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,md}]
+indent_size = 2
+
+[*.{csproj,props,targets,slnx}]
+indent_size = 2
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+dotnet_style_namespace_match_folder = false
+
+# Konvention arvd fran Medusa, dar koden kommer ifran: explicita bool-jamforelser
+# (x == true / x == false). Reglerna nedan vill skriva om dem, sa de halls tysta.
+dotnet_diagnostic.RCS1033.severity = none
+dotnet_diagnostic.S1125.severity = none
+dotnet_diagnostic.IDE0075.severity = none
+
+
+# --- Avig.Analyzers. Samma upplagg som i Avig.Analyzers eget repo: allt pa error. ---
+dotnet_diagnostic.AVIG0001.severity = error
+dotnet_diagnostic.AVIG0002.severity = error
+dotnet_diagnostic.AVIG0003.severity = error
+dotnet_diagnostic.AVIG0004.severity = error
+dotnet_diagnostic.AVIG0005.severity = error
+dotnet_diagnostic.AVIG0006.severity = error
+dotnet_diagnostic.AVIG0007.severity = error
+dotnet_diagnostic.AVIG0008.severity = error
+dotnet_diagnostic.AVIG0009.severity = error
+dotnet_diagnostic.AVIG0010.severity = error
+dotnet_diagnostic.AVIG0011.severity = error
+dotnet_diagnostic.AVIG0012.severity = error
+dotnet_diagnostic.AVIG0014.severity = error
+dotnet_diagnostic.AVIG0015.severity = error
+dotnet_diagnostic.AVIG0020.severity = error
+dotnet_diagnostic.AVIG0021.severity = error
+dotnet_diagnostic.AVIG0022.severity = error
+dotnet_diagnostic.AVIG0023.severity = error
+dotnet_diagnostic.AVIG0024.severity = error
+
+[tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none

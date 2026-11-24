@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="CLAUDE.md" />
+    <File Path="README.md" />
+    <File Path="publish.ps1" />
+    <File Path="release.ps1" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Avig.Ord/Avig.Ord.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Avig.Ord.Tests/Avig.Ord.Tests.csproj" />
+  </Folder>
+</Solution>
