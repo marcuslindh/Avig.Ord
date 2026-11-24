@@ -64,7 +64,7 @@ public class FuzzFindingsTests
         Assert.Equal(OrdErrorKind.Damaged, (await DocxReader.OpenAsync(new MemoryStream(Encoding.UTF8.GetBytes(flat)))).ErrorKind());
     }
 
-    [Fact(Skip = "A bug in Avig.OpenXml 0.1.2, to be fixed there: OpcPackageWriter re-reads every XML part for Flat OPC with its own depth limit of 100.")]
+    [Fact]
     public async Task A_document_nested_deeper_than_100_levels_saves_as_flat_opc()
     {
         string body = string.Concat(Enumerable.Repeat("<w:tbl><w:tr><w:tc>", 40)) + "<w:p/>" + string.Concat(Enumerable.Repeat("</w:tc></w:tr></w:tbl>", 40));
@@ -131,6 +131,22 @@ public class FuzzFindingsTests
         // missing, the field without an end hid the next paragraph, and the equation's x was text.
         Assert.Equal(string.Join('\n', document.Paragraphs.Select(paragraph => paragraph.Text)), await HostileFilesTests.ReadEventTextAsync(file));
         Assert.Equal(0, await TableDepthAtEndAsync(file));
+    }
+
+    [Fact]
+    public async Task The_event_reader_leaves_out_a_paragraph_the_view_does_not_have()
+    {
+        const string body = """
+            <w:p><w:r><w:t>före</w:t></w:r></w:p>
+            <w:p><w:pPr><w:rPr><w:del w:id="1" w:author="A"/></w:rPr></w:pPr><w:del w:id="2" w:author="A"><w:r><w:delText>borttaget stycke</w:delText></w:r></w:del></w:p>
+            <w:p><w:r><w:t>efter</w:t></w:r></w:p>
+            """;
+        byte[] file = TestFiles.Docx(body);
+        OrdDocument document = await TestFiles.OpenAsync(file);
+
+        // Before: the events gave the deleted paragraph as an empty one, which the blocks leave out.
+        Assert.Equal("före\nefter", await HostileFilesTests.ReadEventTextAsync(file));
+        Assert.Equal(string.Join('\n', document.Paragraphs.Select(paragraph => paragraph.Text)), await HostileFilesTests.ReadEventTextAsync(file));
     }
 
     [Fact]

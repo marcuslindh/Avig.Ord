@@ -49,9 +49,6 @@ Nothing is swallowed by the runner. Each target catches only what the package do
 Every other exception is a finding, and so is an input that takes more than two seconds. An
 invariant target that sees a wrong answer throws `InvariantViolationException`, its own type.
 
-A smoke run ends with a line `Known: …` when Flat OPC saves hit the known Avig.OpenXml bug
-below; the harness saves those as zip instead, so that the rest of the input is still tested.
-
 ## Findings
 
 The first rounds (2026-11-24) found these. All are fixed and have regression tests in
@@ -69,7 +66,7 @@ The first rounds (2026-11-24) found these. All are fixed and have regression tes
 | `reader-model` | `WriteMarkdownAsync` started a new renderer for each block, so it did not know a list had come before. | An empty paragraph between list items split the list in two. |
 | `revisions` | `ReadDrawing` took every `w:txbxContent` under a drawing, also those inside its own text boxes. | A text box in a text box was read twice, and in rows the view leaves out. |
 | `flat-opc` | Two relationships with one id in a part's relationships. | The file opened, and `SaveAsync` threw `InvalidOperationException`. It is now a damaged file. |
-| `flat-opc` | A `pkg:xmlData` with two root elements: Avig.OpenXml 0.1.2 throws `InvalidOperationException` from its `XmlWriter` instead of giving Invalid. | `OpenAsync` threw. Worked around in `WordPackage` until it is fixed in Avig.OpenXml. |
+| `flat-opc` | A `pkg:xmlData` with two root elements: Avig.OpenXml 0.1.2 threw `InvalidOperationException` from its `XmlWriter` instead of giving Invalid. | `OpenAsync` threw. Fixed in Avig.OpenXml 0.1.4. |
 | `roundtrip` | A section whose margins are wider than its page. | A table added to it had negative column widths, which the schema forbids. |
 | `roundtrip` | New ids were the largest in use plus one. | With `int.MaxValue` in the file, a new list (and a note or a picture) got a negative id. |
 | `render` | `Enumerable.Sum` over `gridSpan`, which a file can set to `int.MaxValue`; and Markdown padded every row to the `w:tblGrid`. | `OverflowException` from `ColumnCount` and `ToMarkdown`; a few megabytes of grid gave gigabytes of Markdown. Spans are now at most 63, as in Word. |

@@ -42,7 +42,7 @@ Fynden från arbetet med milstolpe 5 (alla rättade, med regressionstester):
 | R05 | `ReadPlainTextAsync` och `WriteMarkdownAsync` gav annan text än `ToPlainText` och `ToMarkdown` (radslut på slutet, en lista som delades av ett tomt stycke). | `reader-model` | Samma trimning; en renderare för hela kroppen (`MarkdownRenderer.ForStream`). |
 | R06 | En textruta i en textruta lästes två gånger och utan hänsyn till sin rads revisionsvy. | `revisions` | `ReadDrawing` går inte in i textrutor. |
 | R07 | Två relationer med samma id gav `InvalidOperationException` när filen sparades. | `flat-opc` | Skadad fil vid öppning. |
-| R08 | Flat OPC med två rotelement i `pkg:xmlData` gav `InvalidOperationException` från Avig.OpenXml 0.1.2. | `flat-opc` | Kringgått i `WordPackage`; ska rättas i Avig.OpenXml. |
+| R08 | Flat OPC med två rotelement i `pkg:xmlData` gav `InvalidOperationException` från Avig.OpenXml 0.1.2. | `flat-opc` | Rättat i Avig.OpenXml 0.1.4. |
 | R09 | Marginaler bredare än sidan gav negativa kolumnbredder i en ny tabell. | `roundtrip` | Textbredden faller tillbaka på A4:s. |
 | R10 | Nya id:n för listor, noter och bilder blev negativa när filen redan använde `int.MaxValue`. | `roundtrip` | `OrdDocument.NextFreeId`. |
 | R11 | `gridSpan` på `int.MaxValue` gav `OverflowException`, och en `w:tblGrid` med 100 000 kolumner gav gigabyte Markdown. | `render` | Högst 63 kolumner per cell och i Markdown, som i Word. |
@@ -51,10 +51,11 @@ Fynden från arbetet med milstolpe 5 (alla rättade, med regressionstester):
 | R14 | En listnivå med bokstäver och start `int.MaxValue` gav en etikett på 82 miljoner tecken per punkt. | `HostileFilesTests` | Över 32 767 skrivs talet med siffror. |
 | R15 | 20 000 komplexa fält i rad, vart och ett i resultatet av det förra, gav stackspill (processen dog). | `HostileFilesTests` | Fält nästlas högst 32 nivåer, i båda läsarna. |
 | R16 | `Footnotes` och `Endnotes` listade noter som inget längre hänvisade till, vilket Word inte visar. | Word-kontrollen | Noterna kroppen hänvisar till, i dess ordning. |
+| R17 | Efter sammanslagningen med mallarbetet: händelseläsaren gav ett tomt stycke för ett stycke som var helt borttaget i vyn, vilket blocken hoppar över. Och `revisions` jämförde text som `AcceptAllRevisions` och `RejectAllRevisions` med rätta slår ihop. | `reader-model`, `revisions` | `EventReader` läser stycket i minnet och frågar `Block.IsGoneInView`; `revisions` jämför styckenas text utan brytningar och etiketter, och hoppar över jämförelsen när ett fält går över en spårad styckemarkering. |
 
-Öppet: Avig.OpenXml:s `OpcPackageWriter` läser om varje XML-del för Flat OPC med en egen
-djupgräns på 100, medan `OrdLimits.MaxXmlDepth` släpper igenom 256. Ett sådant dokument kan
-öppnas men inte sparas som Flat OPC. Ska rättas i Avig.OpenXml; testet är `Skip` tills dess.
+Rättat i Avig.OpenXml 0.1.4: `OpcPackageWriter` läste om varje XML-del för Flat OPC med en egen
+djupgräns på 100, medan `OrdLimits.MaxXmlDepth` släpper igenom 256. Nu tar skrivaren
+`MaxXmlDepth`, som Avig.Ord sätter till samma gräns som vid läsning.
 
 ---
 
@@ -291,7 +292,7 @@ PAGE och NUMPAGES.
 | 6 | Relationer ut ur paketet | Medel | Hög | Låg | S-07 | Verifierat |
 | 7 | Fel felkod (R13) | Medel | Låg | Låg | `HostileFilesTests` | Åtgärdad |
 | 8 | Strömläsaren och modellen ger olika text (R04–R06) | Hög | Medel: fel data i sökindex och export | Medel | `reader-model`, `revisions` | Åtgärdad |
-| 9 | Flat OPC djupare än 100 kan inte sparas | Låg | Medel | Låg | `FuzzFindingsTests` (Skip) | Öppen, i Avig.OpenXml |
+| 9 | Flat OPC djupare än 100 kan inte sparas | Låg | Medel | Låg | `FuzzFindingsTests` | Rättad i Avig.OpenXml 0.1.4 |
 | 10 | Samtidiga uppladdningar | Hög | Medel | Medel | S-05 | Inte testat |
 
 ---
@@ -317,7 +318,7 @@ PAGE och NUMPAGES.
 8. **Fuzzning.** Varje mål är verifierat genom sabotage och har körts minst 20 000 indata i
    smoke-läge utan fynd. Före 1.0: täckningsstyrt minst 8 timmar per mål, och korpusen incheckad.
 9. **Avig.OpenXml.** Felen R08 och djupgränsen för Flat OPC är rättade där, arbetsgången i
-   `WordPackage` borttagen och testet utan `Skip`.
+   `WordPackage` borttagen och testet utan `Skip`. Uppfyllt 2026-11-24 (Avig.OpenXml 0.1.4).
 10. **Prestanda.** Baslinjer finns (avsnitt 3).
 
 ---
@@ -326,7 +327,6 @@ PAGE och NUMPAGES.
 
 | Test-ID | Testnamn | Risk | Grupp | Steg | Förväntat | Åtgärd vid brist |
 |---|---|---|---|---|---|---|
-| SEC-01 | Rätta Avig.OpenXml (R08, Flat OPC-djup) | Medel | B | Rätta där, uppdatera paketet, ta bort `Skip` och `WordPackage`-arbetsgången. | Gröna tester i båda paketen. | — |
 | SEC-02 | `corpus-check.ps1` | Hög | C | Varje sparad indata i egen process med 1 GiB heap och 30 s. | Inga krascher. | Gör om fyndet till ett test. |
 | SEC-03 | Zip-bomb i full storlek | Hög | C | 10 GB i container. | `TooLarge` direkt. | Kontrollera Avig.OpenXml. |
 | SEC-04 | Samtidighet | Medel | C | 32 parallella öppningar av blandade filer. | Stabilt minne. | Dokumentera begränsning. |

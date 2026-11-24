@@ -32,8 +32,7 @@ genererade kroppar (`render`, `events`, `reader-model`, `revisions`) och de små
 `OrdErrorKind`, en hängning eller ett fel svar. Kör smoke-läget efter ändringar i läsarna,
 `InlineReader`, `EventReader`, renderarna, sparningen eller `FormatReader`. Ett fynd blir ett
 regressionstest i `FuzzFindingsTests.cs`, och ett nytt mål ska vara verifierat genom sabotage
-(tabellen i README:n). Ett känt fel i Avig.OpenXml (Flat OPC-skrivarens djupgräns 100) räknas
-som `Known` och sparas som zip i stället.
+(tabellen i README:n).
 
 `tools/Avig.Ord.WordCheck` styr Word via COM (sen bindning med `dynamic`). `create` låter Word
 göra dokument med riktiga Word-funktioner och sparar dem med Words egen läsning (.json) i

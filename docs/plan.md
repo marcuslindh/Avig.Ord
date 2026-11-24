@@ -10,7 +10,7 @@ och projektets beslut. Den här filen är lägesbilden i repot.
 | 2 | Skrivare: DocxWriter, byggarna, bilder, länkar, noter, sektioner, sidhuvud och sidfot, Flat OPC | Klar 2026-11-24 |
 | 3 | Dokumentmodell: öppna, ändra, spara, sök och ersätt över körningar, spårade ändringar | Klar 2026-11-24 |
 | 4 | Mallar: `{{…}}`, avsnitt, villkor, MERGEFIELD, innehållskontroller, källgenerator | Klar 2026-11-24 |
-| 5 | Robusthet: fuzzning, fientliga filer, kontroll i Word, testplan | Pågår (grenen `robustness`) |
+| 5 | Robusthet: fuzzning, fientliga filer, kontroll i Word, testplan | Klar 2026-11-24 (`docs/testplan.md`) |
 
 ## Arkitektur i korthet
 
@@ -22,9 +22,7 @@ sökbara texten; byggarna skriver XML genom `IContentSink`.
 
 - **.doc, PDF och sidlayout** ingår inte. Fält räknas inte om; de visar resultatet Word sparade.
 - **Ett stycke vars styckemarkering ensam är borttagen** (spårat) visas i Accepted-vyn som ett
-  eget stycke, inte ihopslaget med nästa. `AcceptAllRevisions` slår ihop dem.
-- **Händelseläsaren** (`ReadEventsAsync`) ger start och slut även för stycken som i vyn är helt
-  borttagna; blockläsaren och dokumentmodellen hoppar över dem.
+  eget stycke, inte ihopslaget med nästa. `AcceptAllRevisions` slår ihop dem, och `RejectAllRevisions` på samma sätt för en infogad styckemarkering i Original-vyn.
 - **Avsnitt inuti ett stycke** (`{{#X}}…{{/X}}` på samma rad) fylls som text, i formateringen där
   avsnittet börjar.
 - **Sök och ersätt** går inte över styckegränser.

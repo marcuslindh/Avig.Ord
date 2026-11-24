@@ -189,11 +189,6 @@ internal static class Program
 
         Console.WriteLine();
 
-        if (Harness.KnownFlatDepthIssues > 0)
-        {
-            Console.WriteLine($"Known: {Harness.KnownFlatDepthIssues} Flat OPC saves hit the depth limit of 100 in Avig.OpenXml's writer and were saved as zip (README, Findings).");
-        }
-
         if (totalFindings > 0)
         {
             Console.WriteLine($"FAIL: {totalFindings} findings, saved under findings/.");

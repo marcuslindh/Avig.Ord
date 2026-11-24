@@ -61,7 +61,7 @@ public sealed class DocxReader : IAsyncDisposable
     public static async Task<Result<DocxReader>> OpenAsync(string path, ReadOptions? options = null, CancellationToken cancellationToken = default)
     {
         options ??= ReadOptions.Default;
-        Result<OpcPackage> opened = await WordPackage.OpenAsync(path, options.Limits.ToOpenOptions(), cancellationToken);
+        Result<OpcPackage> opened = await OpcPackage.OpenAsync(path, options.Limits.ToOpenOptions(), cancellationToken);
 
         return await StartAsync(opened, options, cancellationToken);
     }
@@ -76,7 +76,7 @@ public sealed class DocxReader : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(input);
         options ??= ReadOptions.Default;
-        Result<OpcPackage> opened = await WordPackage.OpenAsync(input, options.Limits.ToOpenOptions(), leaveOpen, cancellationToken);
+        Result<OpcPackage> opened = await OpcPackage.OpenAsync(input, options.Limits.ToOpenOptions(), leaveOpen, cancellationToken);
 
         return await StartAsync(opened, options, cancellationToken);
     }

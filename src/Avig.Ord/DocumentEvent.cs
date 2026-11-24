@@ -69,7 +69,9 @@ internal static class EventReader
         bool positioned = false;
         bool first = true;
 
-        bool more = await reader.ReadAsync();
+        XmlReader source = reader;
+        XmlReader? paragraph = null;
+        bool more = await source.ReadAsync();
 
         while (more == true)
         {
@@ -82,7 +84,20 @@ internal static class EventReader
             }
             else if (first == false)
             {
-                more = await reader.ReadAsync();
+                more = await source.ReadAsync();
+
+                if (more == false && paragraph is not null)
+                {
+                    // The end of a paragraph read from memory: back to the part, which is already
+                    // on the node after the paragraph.
+                    paragraph.Dispose();
+                    paragraph = null;
+                    source = reader;
+                    more = true;
+                    positioned = true;
+
+                    continue;
+                }
 
                 if (more == false)
                 {
@@ -92,14 +107,14 @@ internal static class EventReader
 
             first = false;
 
-            if (OpcXml.IsEnd(reader, bodyDepth) == true)
+            if (paragraph is null && OpcXml.IsEnd(source, bodyDepth) == true)
             {
                 yield break;
             }
 
             if (skipUntil >= 0)
             {
-                if (reader.NodeType == XmlNodeType.EndElement && reader.Depth == skipUntil)
+                if (source.NodeType == XmlNodeType.EndElement && source.Depth == skipUntil)
                 {
                     skipUntil = -1;
                 }
@@ -109,13 +124,13 @@ internal static class EventReader
 
             // A row marked deleted (Accepted view) or inserted (Original view) in its w:trPr is
             // left out, as Table.Rows leaves it out; the properties come before the cells.
-            if (pendingRow >= 0 && reader.NodeType is XmlNodeType.Element or XmlNodeType.EndElement)
+            if (pendingRow >= 0 && source.NodeType is XmlNodeType.Element or XmlNodeType.EndElement)
             {
                 int row = pendingRow;
 
-                if (reader.NodeType == XmlNodeType.Element && reader.Depth == row + 1 && reader.LocalName is "tblPrEx" or "trPr")
+                if (source.NodeType == XmlNodeType.Element && source.Depth == row + 1 && source.LocalName is "tblPrEx" or "trPr")
                 {
-                    XNode properties = await XNode.ReadFromAsync(reader, cancellationToken);
+                    XNode properties = await XNode.ReadFromAsync(source, cancellationToken);
                     positioned = true;
 
                     if (properties is XElement element && element.Name.LocalName == "trPr")
@@ -139,16 +154,16 @@ internal static class EventReader
                 yield return new DocumentEvent(DocumentEventKind.RowStart, string.Empty, tables);
             }
 
-            if (reader.NodeType == XmlNodeType.Element)
+            if (source.NodeType == XmlNodeType.Element)
             {
-                string name = reader.LocalName;
-                bool empty = reader.IsEmptyElement;
+                string name = source.LocalName;
+                bool empty = source.IsEmptyElement;
 
                 if (Skips(name, view) == true)
                 {
                     if (empty == false)
                     {
-                        skipUntil = reader.Depth;
+                        skipUntil = source.Depth;
                     }
 
                     continue;
@@ -156,7 +171,7 @@ internal static class EventReader
 
                 // Only WordprocessingML: the text of an equation (m:t) is no more in the body's
                 // text here than in Paragraph.Text.
-                if (reader.NamespaceURI is not (WordNames.TransitionalMain or WordNames.StrictMain))
+                if (source.NamespaceURI is not (WordNames.TransitionalMain or WordNames.StrictMain))
                 {
                     continue;
                 }
@@ -164,6 +179,36 @@ internal static class EventReader
                 switch (name)
                 {
                     case "p":
+                        // A paragraph is read into memory first, to tell whether the view has it
+                        // at all (Block.IsGoneInView, as the blocks have it), and then read from there.
+                        if (empty == false && paragraph is null)
+                        {
+                            XElement element = (XElement)await XNode.ReadFromAsync(source, cancellationToken);
+
+                            // Left on the node after the paragraph, whether it is read or not.
+                            positioned = true;
+
+                            if (Block.IsGoneInView(WordNames.For(element), view, element) == true)
+                            {
+                                continue;
+                            }
+
+                            // XElement.CreateReader cannot read async, so the paragraph is read back from its text.
+                            XmlReaderSettings settings = new()
+                            {
+                                Async = true,
+                                DtdProcessing = DtdProcessing.Prohibit,
+                                XmlResolver = null,
+                            };
+
+                            paragraph = XmlReader.Create(new StringReader(element.ToString(System.Xml.Linq.SaveOptions.DisableFormatting)), settings);
+                            source = paragraph;
+                            await source.ReadAsync();
+                            positioned = true;
+
+                            continue;
+                        }
+
                         // Fields are read a paragraph at a time, as Paragraph.Inlines reads them: one left
                         // open in a paragraph before does not hide this one's text as its instruction.
                         fields.Clear();
@@ -202,7 +247,7 @@ internal static class EventReader
                         else
                         {
                             // The row starts once its properties have said whether the view has it.
-                            pendingRow = reader.Depth;
+                            pendingRow = source.Depth;
                         }
 
                         break;
@@ -236,7 +281,7 @@ internal static class EventReader
                         break;
 
                     case "sym":
-                        OpcXml.TryGetAttribute(reader, "char", out string? code);
+                        OpcXml.TryGetAttribute(source, "char", out string? code);
                         string symbol = InlineReader.Symbol(code);
 
                         if (inInstruction == false && symbol.Length > 0)
@@ -247,7 +292,7 @@ internal static class EventReader
                         break;
 
                     case "fldChar":
-                        OpcXml.TryGetAttribute(reader, "fldCharType", out string? type);
+                        OpcXml.TryGetAttribute(source, "fldCharType", out string? type);
 
                         // As Paragraph.Inlines: fields nested past InlineReader.MaxFieldNesting are part of the one they are in.
                         if (ignoredFields > 0 || (type == "begin" && fields.Count >= InlineReader.MaxFieldNesting))
@@ -281,7 +326,7 @@ internal static class EventReader
 
                     case "t":
                     case "delText":
-                        string text = await reader.ReadElementContentAsStringAsync();
+                        string text = await source.ReadElementContentAsStringAsync();
                         positioned = true;
 
                         if (inInstruction == false && text.Length > 0)
@@ -311,7 +356,7 @@ internal static class EventReader
                     case "br":
                         if (inInstruction == false)
                         {
-                            OpcXml.TryGetAttribute(reader, "type", out string? breakType);
+                            OpcXml.TryGetAttribute(source, "type", out string? breakType);
 
                             if (breakType is "page" or "column")
                             {
@@ -332,12 +377,12 @@ internal static class EventReader
                 continue;
             }
 
-            if (reader.NodeType != XmlNodeType.EndElement || reader.NamespaceURI is not (WordNames.TransitionalMain or WordNames.StrictMain))
+            if (source.NodeType != XmlNodeType.EndElement || source.NamespaceURI is not (WordNames.TransitionalMain or WordNames.StrictMain))
             {
                 continue;
             }
 
-            switch (reader.LocalName)
+            switch (source.LocalName)
             {
                 case "p":
                     fields.Clear();

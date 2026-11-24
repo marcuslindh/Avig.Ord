@@ -149,7 +149,7 @@ public sealed partial class OrdDocument
     public static async Task<Result<OrdDocument>> OpenAsync(string path, ReadOptions? options = null, CancellationToken cancellationToken = default)
     {
         options ??= ReadOptions.Default;
-        Result<OpcPackage> opened = await WordPackage.OpenAsync(path, options.Limits.ToOpenOptions(), cancellationToken);
+        Result<OpcPackage> opened = await OpcPackage.OpenAsync(path, options.Limits.ToOpenOptions(), cancellationToken);
 
         return await LoadAsync(opened, options, cancellationToken);
     }
@@ -163,7 +163,7 @@ public sealed partial class OrdDocument
     {
         ArgumentNullException.ThrowIfNull(input);
         options ??= ReadOptions.Default;
-        Result<OpcPackage> opened = await WordPackage.OpenAsync(input, options.Limits.ToOpenOptions(), true, cancellationToken);
+        Result<OpcPackage> opened = await OpcPackage.OpenAsync(input, options.Limits.ToOpenOptions(), true, cancellationToken);
 
         return await LoadAsync(opened, options, cancellationToken);
     }
@@ -231,6 +231,7 @@ public sealed partial class OrdDocument
 
         await using OpcPackageWriter writer = await OpcPackageWriter.CreateAsync(output, kind, true, cancellationToken);
         writer.FlatOpcProgId = "Word.Document";
+        writer.MaxXmlDepth = Options.Limits.MaxXmlDepth;
 
         foreach (string name in partOrder)
         {

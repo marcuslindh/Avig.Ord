@@ -39,7 +39,7 @@ public abstract partial class Block
         {
             if (child.Name == names.Paragraph)
             {
-                if (IsGoneInView(context, child) == false)
+                if (IsGoneInView(context.Names, context.View, child) == false)
                 {
                     blocks.Add(new Paragraph(context, child));
                 }
@@ -62,17 +62,16 @@ public abstract partial class Block
     /// A paragraph whose mark alone was deleted, which Word joins with the next one, is kept as
     /// a paragraph of its own.
     /// </summary>
-    private static bool IsGoneInView(DocumentContext context, XElement paragraph)
+    internal static bool IsGoneInView(WordNames names, RevisionView view, XElement paragraph)
     {
-        WordNames names = context.Names;
         XElement? mark = paragraph.Element(names.ParagraphProperties)?.Element(names.RunProperties);
         XName? revision = null;
 
-        if (context.View == RevisionView.Accepted && mark?.Element(names.Deleted) is not null)
+        if (view == RevisionView.Accepted && mark?.Element(names.Deleted) is not null)
         {
             revision = names.Deleted;
         }
-        else if (context.View == RevisionView.Original && mark?.Element(names.Inserted) is not null)
+        else if (view == RevisionView.Original && mark?.Element(names.Inserted) is not null)
         {
             revision = names.Inserted;
         }

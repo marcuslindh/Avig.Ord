@@ -172,28 +172,12 @@ internal static class Harness
         document.Properties.Title = "Fuzz";
     }
 
-    /// <summary>How many Flat OPC saves hit the known depth limit of Avig.OpenXml's writer (see <see cref="SaveAsync"/>).</summary>
-    public static int KnownFlatDepthIssues { get; private set; }
-
     public static async Task<byte[]> SaveAsync(OrdDocument document, SaveOptions options)
     {
-        try
-        {
-            using MemoryStream output = new();
-            await document.SaveAsync(output, options);
+        using MemoryStream output = new();
+        await document.SaveAsync(output, options);
 
-            return output.ToArray();
-        }
-        catch (XmlException exception) when (options.FlatOpc == true && exception.Message.Contains("nested more than 100 levels", StringComparison.Ordinal) == true)
-        {
-            // Known, in Avig.OpenXml 0.1.2: OpcPackageWriter re-reads every XML part for Flat OPC
-            // with its own depth limit of 100, while OrdLimits.MaxXmlDepth lets a document of 256
-            // levels open. It has to be fixed there; FuzzFindingsTests has the test, skipped until
-            // then. Saved as a zip instead, so that the rest of the harness still runs.
-            KnownFlatDepthIssues++;
-
-            return await SaveAsync(document, options with { FlatOpc = false });
-        }
+        return output.ToArray();
     }
 
     /// <summary>Everything the document model can say about a document.</summary>

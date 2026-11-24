@@ -1,4 +1,5 @@
 using System.Text;
+using System.Xml.Linq;
 
 namespace Avig.Ord.Fuzz;
 
@@ -197,22 +198,87 @@ internal static class BodyTargets
     {
         byte[] file = File(input);
         await Dump.WriteAsync("input.docx", new MemoryStream(file));
-        string accepted = await TextAsync(file, RevisionView.Accepted);
-        string original = await TextAsync(file, RevisionView.Original);
+        string accepted = BodyText(await OpenAsync(file, RevisionView.Accepted));
+        string original = BodyText(await OpenAsync(file, RevisionView.Original));
+        bool comparable = JoinsKeepFields(await OpenAsync(file, RevisionView.Marked));
 
         foreach (RevisionView view in Views)
         {
             OrdDocument document = await OpenAsync(file, view);
             document.AcceptAllRevisions();
-            Compare(view, "text after AcceptAllRevisions and the Accepted view's", [accepted], [document.ToPlainText()]);
-
             OrdDocument again = await OpenAsync(await Harness.SaveAsync(document, SaveOptions.Default), RevisionView.Marked);
-            Compare(view, "text after AcceptAllRevisions and saving, in the Marked view", [accepted], [again.ToPlainText()]);
+
+            if (comparable == true)
+            {
+                Compare(view, "text after AcceptAllRevisions and the Accepted view's", [accepted], [BodyText(document)]);
+                Compare(view, "text after AcceptAllRevisions and saving, in the Marked view", [accepted], [BodyText(again)]);
+            }
 
             document = await OpenAsync(file, view);
             document.RejectAllRevisions();
-            Compare(view, "text after RejectAllRevisions and the Original view's", [original], [document.ToPlainText()]);
+
+            if (comparable == true)
+            {
+                Compare(view, "text after RejectAllRevisions and the Original view's", [original], [BodyText(document)]);
+            }
         }
+    }
+
+    /// <summary>
+    /// False when a paragraph whose mark is tracked has a complex field that does not end in it.
+    /// Fields are read a paragraph at a time, so once AcceptAllRevisions or RejectAllRevisions has
+    /// joined that paragraph with the next, the field goes on into the next one's text, as it
+    /// does in Word, and the views cannot have the same text. Such a body is still accepted,
+    /// rejected and saved; only the comparison is left out.
+    /// </summary>
+    private static bool JoinsKeepFields(OrdDocument document)
+    {
+        XNamespace main = document.Body.Name.Namespace;
+
+        foreach (XElement paragraph in document.Body.Descendants(main + "p"))
+        {
+            XElement? mark = paragraph.Element(main + "pPr")?.Element(main + "rPr");
+
+            if (mark is null || (mark.Element(main + "ins") is null && mark.Element(main + "del") is null))
+            {
+                continue;
+            }
+
+            int open = 0;
+
+            foreach (XElement fieldChar in paragraph.Descendants(main + "fldChar"))
+            {
+                string? type = (string?)fieldChar.Attribute(main + "fldCharType");
+
+                if (type == "begin")
+                {
+                    open++;
+                }
+                else if (type == "end")
+                {
+                    open--;
+                }
+            }
+
+            if (open != 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The text of every paragraph, without list labels and line or paragraph breaks.
+    /// AcceptAllRevisions and RejectAllRevisions join a paragraph whose mark alone is deleted (or
+    /// inserted) with the next one, as Word does, and the joined paragraph has the next one's
+    /// properties, its list among them; the Accepted and Original views keep it as a paragraph of
+    /// its own (docs/plan.md, known limitations). The text and its order must still be the same.
+    /// </summary>
+    private static string BodyText(OrdDocument document)
+    {
+        return string.Concat(OrdDocument.AllParagraphs(document.Blocks).Select(paragraph => paragraph.Text)).Replace("\n", string.Empty, StringComparison.Ordinal);
     }
 
     private static async Task<OrdDocument> OpenAsync(byte[] file, RevisionView view)
@@ -225,13 +291,6 @@ internal static class BodyTargets
         }
 
         return document;
-    }
-
-    private static async Task<string> TextAsync(byte[] file, RevisionView view)
-    {
-        OrdDocument document = await OpenAsync(file, view);
-
-        return document.ToPlainText();
     }
 
     private static void Compare(RevisionView view, string what, List<string> expected, List<string> actual)

@@ -244,6 +244,7 @@ public sealed class DocxWriter : IAsyncDisposable
 
         OpcPackageWriter package = await OpcPackageWriter.CreateAsync(output, kind, leaveOpen, cancellationToken);
         package.FlatOpcProgId = "Word.Document";
+        package.MaxXmlDepth = OrdLimits.Unlimited.MaxXmlDepth;
         string contentType = WordTypes.DocumentContentType;
 
         if (options.Template == true)
