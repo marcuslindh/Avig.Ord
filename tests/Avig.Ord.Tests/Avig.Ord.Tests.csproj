@@ -25,6 +25,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Avig.Ord\Avig.Ord.csproj" />
+    <!-- The generator, for the [OrdTemplate] types in the tests. -->
+    <ProjectReference Include="..\..\src\Avig.Ord.Generators\Avig.Ord.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

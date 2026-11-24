@@ -40,6 +40,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The source generator is built before the package but not referenced by it: it ships under
+         analyzers/dotnet/cs, where the compiler of whoever uses the package finds it. -->
+    <ProjectReference Include="..\Avig.Ord.Generators\Avig.Ord.Generators.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <None Include="..\Avig.Ord.Generators\bin\$(Configuration)\netstandard2.0\Avig.Ord.Generators.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Avig.Ord.Tests" />
     <InternalsVisibleTo Include="Avig.Ord.Fuzz" />
   </ItemGroup>

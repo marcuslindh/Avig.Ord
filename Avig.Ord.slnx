@@ -8,6 +8,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Avig.Ord/Avig.Ord.csproj" />
+    <Project Path="src/Avig.Ord.Generators/Avig.Ord.Generators.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Avig.Ord.Tests/Avig.Ord.Tests.csproj" />
