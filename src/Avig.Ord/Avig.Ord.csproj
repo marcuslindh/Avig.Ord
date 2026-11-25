@@ -32,7 +32,7 @@
 
   <ItemGroup>
     <PackageReference Include="Avig.Result" Version="1.0.2" />
-    <PackageReference Include="Avig.OpenXml" Version="0.2.0" />
+    <PackageReference Include="Avig.OpenXml" Version="0.2.2" />
   </ItemGroup>
 
   <ItemGroup>

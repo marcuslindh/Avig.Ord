@@ -10,8 +10,8 @@
       },
       "Avig.OpenXml": {
         "type": "Transitive",
-        "resolved": "0.2.0",
-        "contentHash": "DvtXA+F3fIOXLa5wTREqTV74ywvZRcpXqiQQoq06qe2Ta2shqVirZIy85sNS++S3Lk5nfd8f/eOK9Pi185/KTA==",
+        "resolved": "0.2.2",
+        "contentHash": "C7bPqsR1PSv7TKgRzgfB0qb/7lGJvhX+uMA6rX9inp244NXz6V2nbzBvOWE+w9K8FDyfl1xhFfJf9vsYADb8+g==",
         "dependencies": {
           "Avig.Result": "1.0.2"
         }
@@ -24,7 +24,7 @@
       "avig.ord": {
         "type": "Project",
         "dependencies": {
-          "Avig.OpenXml": "[0.2.0, )",
+          "Avig.OpenXml": "[0.2.2, )",
           "Avig.Result": "[1.0.2, )"
         }
       }
