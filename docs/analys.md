@@ -14,7 +14,7 @@ Underlaget om andra bibliotek finns i Knowledge: "World — Referens: Word-bibli
 | Skapa dokument | **Ström** (`DocxWriter`) och **dokumentmodell** (`OrdDocument.Create`) med samma byggare |
 | Typer | **Samma typer** i läsaren och dokumentmodellen; läsarens är skrivskyddade |
 | Formatering vid läsning | **Verklig** (`Format`) som standard, rå (`DirectFormat`) finns |
-| Enheter | **`Length`**, lagrad som EMU |
+| Enheter | **`Length`**, lagrad som EMU; i Avig.OpenXml från 0.2.0, delad med Kalkyl och Bildspel |
 | Spårade ändringar vid läsning | **Som godkända** som standard; Original och Marked finns |
 | Ändringar i dokumentmodellen | **Kan spåras** med `TrackChanges(author)` |
 | Sök och ersätt | Text och regex, alla delar, ersätt med innehåll; inte över styckegränser |

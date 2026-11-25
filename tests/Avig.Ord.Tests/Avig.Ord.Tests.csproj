@@ -21,6 +21,7 @@
     <Using Include="Xunit" />
     <Using Include="Avig" />
     <Using Include="Avig.Ord" />
+    <Using Include="Avig.OpenXml" />
   </ItemGroup>
 
   <ItemGroup>

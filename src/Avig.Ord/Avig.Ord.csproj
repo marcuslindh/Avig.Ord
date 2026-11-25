@@ -32,7 +32,12 @@
 
   <ItemGroup>
     <PackageReference Include="Avig.Result" Version="1.0.2" />
-    <PackageReference Include="Avig.OpenXml" Version="0.1.6" />
+    <PackageReference Include="Avig.OpenXml" Version="0.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Length lives in Avig.OpenXml, shared with Avig.Kalkyl and Avig.Bildspel. -->
+    <Using Include="Avig.OpenXml" />
   </ItemGroup>
 
   <ItemGroup>

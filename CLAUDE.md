@@ -47,7 +47,11 @@ Jämförelsens regler (`Report.cs`, `OrdSide.cs`) länkas in i testerna. Testpla
 
 - **Avig.OpenXml** (eget paket, `G:\OneDrive\SkunkWorks\Prod\Lib\Avig.OpenXml`) gör paketlagret:
   zip och Flat OPC, gränser, relationer, content types, XmlReader utan DTD och med djupgräns.
-  Det är 0.x i `G:\LocalNugetRepo` (se `nuget.config`).
+  Det är 0.x i `G:\LocalNugetRepo` (se `nuget.config`). Måttypen **`Length`** ligger också där
+  (namnrymden `Avig.OpenXml`, från 0.2.0), delad med Avig.Kalkyl och Avig.Bildspel; Ords projekt
+  har `<Using Include="Avig.OpenXml" />`, och den som använder Ord behöver `using Avig.OpenXml;`.
+  Twips och halvpunkter (`FromTwips`, `ToHalfPoints` …) är publika där. Ord använder inte
+  DrawingML-lagret (`Avig.OpenXml.Drawing`) än; bilderna skrivs av Ords egna byggare.
 - **Modellen** (`Blocks.cs`, `Inlines.cs`) är tunna vyer över `XElement`: `Paragraph`, `Table`,
   `TableRow`, `TableCell`, `Run`, `Hyperlink`, `Field`, `Picture` … Samma typer i
   `DocxReader` (skrivskyddade, `Context.Owner` är null) och `OrdDocument`.

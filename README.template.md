@@ -41,7 +41,8 @@ Paragraphs and tables are thin views over the document: `Text`, `Runs`, `Format`
 it), `DirectFormat` (what the run itself sets), `StyleName`, `OutlineLevel`, `List` with the label
 Word shows, and for a table `Rows`, `Cells`, `ColumnSpan` and `VerticalMerge`. Every index is
 0-based, and every length is a `Length` (`Length.Cm(2.5)`, `Length.Pt(11)`, `.ToCm()`), so the
-unit is never a guess.
+unit is never a guess. `Length` lives in the namespace `Avig.OpenXml` of the package Avig.OpenXml,
+shared with Avig.Kalkyl and Avig.Bildspel, so code that uses it needs `using Avig.OpenXml;`.
 
 <!-- example: read -->
 ```csharp
