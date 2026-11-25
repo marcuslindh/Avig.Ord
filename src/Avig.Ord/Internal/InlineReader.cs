@@ -437,7 +437,10 @@ internal static class InlineReader
 
         public void Add(Inline inline)
         {
-            if (fields.Count > 0 && fields.Peek().InInstruction == true)
+            // Any open field in its instruction hides what is added, not only the innermost: the
+            // result of a field nested in an IF's instruction is part of that instruction. A
+            // hyperlink begun in such a result and ended in the IF's result put it in the text.
+            if (InAnyInstruction() == true)
             {
                 return;
             }
@@ -544,12 +547,17 @@ internal static class InlineReader
             }
 
             Field made = new(Context, field.Start, field.Instruction.ToString(), field.Result);
-            bool insideInstruction = fields.Count > 0 && fields.Peek().InInstruction == true;
 
-            if (insideInstruction == false)
+            if (InAnyInstruction() == false)
             {
                 field.Parent.Add(made);
             }
+        }
+
+        /// <summary>True when some open field is still in its instruction, as EventReader decides whether text is shown.</summary>
+        private bool InAnyInstruction()
+        {
+            return fields.Any(field => field.InInstruction == true);
         }
 
         /// <summary>Takes the results of fields that have ended off the top of the stack, once the containers above them have ended.</summary>

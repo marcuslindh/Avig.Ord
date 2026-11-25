@@ -174,6 +174,28 @@ public class FuzzFindingsTests
         Assert.Equal(document.ToMarkdown(), markdown.ToString());
     }
 
+    [Fact]
+    public async Task A_hyperlink_from_a_field_result_in_an_if_instruction_to_the_if_result_shows_only_the_if_result()
+    {
+        const string paragraph = """
+            <w:p>
+              <w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText>IF </w:instrText></w:r>
+              <w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r>
+              <w:hyperlink w:anchor="x">
+                <w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>inre</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>
+                <w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>yttre</w:t></w:r>
+              </w:hyperlink>
+              <w:r><w:fldChar w:fldCharType="end"/></w:r>
+            </w:p>
+            """;
+        byte[] file = TestFiles.Docx(paragraph);
+
+        // Before: the model read "inreyttre", since the inner field's result went into the
+        // hyperlink, which ended in the IF's result; the events (rightly) gave "yttre".
+        Assert.Equal("yttre", (await TestFiles.OpenAsync(file)).Paragraphs[0].Text);
+        Assert.Equal("yttre", await HostileFilesTests.ReadEventTextAsync(file));
+    }
+
     // ---- revisions: nested text boxes --------------------------------------------------------
 
     [Fact]
