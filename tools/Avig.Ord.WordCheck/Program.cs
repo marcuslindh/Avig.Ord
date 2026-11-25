@@ -43,6 +43,11 @@ internal static class Program
             {
                 failures += await CheckAsync(session, output, wordFiles);
             }
+
+            if (command is "active" or "all")
+            {
+                failures += await ActiveCheck.RunAsync(session, Path.Combine(output, "active"));
+            }
         }
 
         Console.WriteLine();

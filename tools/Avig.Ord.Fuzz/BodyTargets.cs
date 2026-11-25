@@ -246,7 +246,11 @@ internal static class BodyTargets
 
             int open = 0;
 
-            foreach (XElement fieldChar in paragraph.Descendants(main + "fldChar"))
+            // The paragraph's own fields: those in a text box inside it belong to its paragraphs.
+            IEnumerable<XElement> own = paragraph.Descendants(main + "fldChar")
+                .Where(fieldChar => fieldChar.Ancestors().TakeWhile(ancestor => ancestor != paragraph).Any(ancestor => ancestor.Name == main + "txbxContent") == false);
+
+            foreach (XElement fieldChar in own)
             {
                 string? type = (string?)fieldChar.Attribute(main + "fldCharType");
 
@@ -254,8 +258,9 @@ internal static class BodyTargets
                 {
                     open++;
                 }
-                else if (type == "end")
+                else if (type == "end" && open > 0)
                 {
+                    // As the readers have it: an end with no field open ends nothing.
                     open--;
                 }
             }

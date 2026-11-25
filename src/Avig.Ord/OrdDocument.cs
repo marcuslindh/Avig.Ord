@@ -281,11 +281,8 @@ public sealed partial class OrdDocument
     /// <summary>Takes out the VBA project and everything that belongs to it. The file is then saved as a .docx (or .dotx) unless another format is asked for.</summary>
     public void RemoveMacros()
     {
-        foreach (string name in MacroParts())
-        {
-            parts.Remove(name);
-            relationships.Remove(name);
-        }
+        // The relationships that pointed to the VBA project go with it.
+        DropParts(MacroParts(), removeExternal: false);
 
         PartData main = parts[MainPartName];
 

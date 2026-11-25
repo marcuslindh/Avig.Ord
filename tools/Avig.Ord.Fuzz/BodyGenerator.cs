@@ -157,7 +157,7 @@ internal sealed class BodyGenerator
                 break;
 
             case < 16:
-                xml.Append("<w:fldSimple w:instr=\"").Append(Escape(Pick([" PAGE ", "MERGEFIELD Namn", "HYPERLINK \"https://example.com/\"", string.Empty]))).Append("\">");
+                xml.Append("<w:fldSimple w:instr=\"").Append(Escape(Pick([" PAGE ", "MERGEFIELD Namn", "HYPERLINK \"https://example.com/\"", " INCLUDEPICTURE \"http://example.com/a.png\" \\d", string.Empty]))).Append("\">");
                 Run(deleted);
                 xml.Append("</w:fldSimple>");
 
@@ -228,7 +228,7 @@ internal sealed class BodyGenerator
             xml.Append("<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>");
         }
 
-        string instruction = Pick(["MERGEFIELD Förnamn \\* MERGEFORMAT", "PAGE", "HYPERLINK \"https://example.com/\"", "IF ", "DATE", "TOC \\o \"1-3\""]);
+        string instruction = Pick(["MERGEFIELD Förnamn \\* MERGEFORMAT", "PAGE", "HYPERLINK \"https://example.com/\"", "IF ", "DATE", "TOC \\o \"1-3\"", "DDEAUTO c:\\\\x.exe \"/k\"", "INCLUDETEXT \"a.docx\""]);
         xml.Append("<w:r><w:").Append(Instruction(deleted)).Append(" xml:space=\"preserve\">").Append(Escape(instruction)).Append("</w:").Append(Instruction(deleted)).Append("></w:r>");
 
         if (random.Next(5) == 0)

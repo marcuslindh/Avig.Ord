@@ -127,6 +127,21 @@ With a class instead of a dictionary, the source generator makes the mapping at 
 @@revisions@@
 ```
 
+## Files from outside
+
+Avig.Ord never runs a macro, follows a link or updates a field, but a document it saves keeps
+whatever it had. `ActiveContent` says what in a file can act on its own or fetch something when
+Word opens it — the ways malware gets into documents: macros, ActiveX controls, embedded OLE
+objects, fields such as DDE and INCLUDEPICTURE, and external references such as a template
+attached from a server. `RemoveActiveContent` takes all of it out, and Word opens the result
+without repair. Zip files that say one thing to Office and another to a scanner are refused when
+they are opened.
+
+<!-- example: clean -->
+```csharp
+@@clean@@
+```
+
 ## The API at a glance
 
 | Task | API |
@@ -143,6 +158,7 @@ With a class instead of a dictionary, the source generator makes the mapping at 
 | Templates | `FillTemplate`, `TemplateValues`, `[OrdTemplate]`, `[TemplateName]`, `TemplateResult.Missing` |
 | Out | `ToPlainText`, `ToMarkdown`, `SaveMarkdownAsync` |
 | Macros | `HasMacros`, `RemoveMacros` (macros are kept or removed, never run) |
+| Active content | `ActiveContent`, `ExternalReferences`, `RemoveActiveContent`; `DocxReader.GetActiveContentAsync`, `GetExternalReferencesAsync` |
 | Limits and errors | `OrdLimits`, `ErrorKind()`, `OrdErrorKind` |
 
 ## License

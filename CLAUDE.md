@@ -79,6 +79,12 @@ Jämförelsens regler (`Report.cs`, `OrdSide.cs`) länkas in i testerna. Testpla
 - **Det som skrivs ska klara Microsofts schemavalidator** (`TestFiles.Validate`), i schemats
   ordning för barnelement (rPr, pPr, style …).
 - **Ett fel om en fil blir ett test** (`HostileFilesTests.cs`, `FuzzFindingsTests.cs`).
+- **Aktivt innehåll** (makron, ActiveX, OLE, `altChunk`, fält som DDE och INCLUDEPICTURE, externa
+  relationer utom hyperlänkar) avgörs på ett ställe, `ActiveContentRules`, för både
+  `OrdDocument.ActiveContent` och `DocxReader.GetActiveContentAsync`. Ett nytt slag läggs till där,
+  i `RemoveActiveContent` och i `ActiveContentTests`; en rensad fil ska klara schemavalidatorn och
+  `Avig.Ord.WordCheck active`. Läs XML bara för att titta med `PeekXml`, så att delen sparas
+  byte för byte.
 - **README-exemplen är tester.** Skriv README i `README.template.md`, där `@@namn@@` står för
   koden i `#region example: namn` i `tests/Avig.Ord.Tests/ReadmeExamples.cs`, och gör README.md
   med `dotnet run tools/readme.cs`. `Every_README_example_is_code_that_runs_here` failar om de

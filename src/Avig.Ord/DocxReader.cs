@@ -53,6 +53,64 @@ public sealed class DocxReader : IAsyncDisposable
     /// <summary>True when the file holds a VBA project. The macros are never run.</summary>
     public bool HasMacros => package.HasMacros;
 
+    /// <summary>
+    /// What in the file can act on its own or fetch something when Word opens it, as
+    /// <see cref="OrdDocument.ActiveContent"/> has it. The parts that can hold fields are read
+    /// through once to look for fields such as DDE; nothing is kept in memory.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The kinds of active content found; <see cref="ActiveContent.None"/> for a plain document.</returns>
+    public async Task<ActiveContent> GetActiveContentAsync(CancellationToken cancellationToken = default)
+    {
+        ActiveContent found = ActiveContent.None;
+        bool fields = false;
+
+        foreach (string name in package.PartNames)
+        {
+            package.TryGetContentType(name, out string? contentType);
+            found |= ActiveContentRules.OfPart(name, contentType);
+
+            if (OpcPath.TryGetSourcePart(name, out string? source) == true)
+            {
+                foreach (OpcRelationship relationship in await package.GetRelationshipsAsync(source, cancellationToken))
+                {
+                    found |= ActiveContentRules.OfRelationship(relationship);
+                }
+            }
+
+            if (fields == false && ActiveContentRules.HoldsFields(contentType) == true)
+            {
+                Result<Stream> opened = await package.OpenPartAsync(name, cancellationToken);
+
+                if (opened.IsSuccess(out Stream? stream) == true)
+                {
+                    await using (stream)
+                    {
+                        using XmlReader reader = package.CreateXmlReader(stream);
+                        fields = await FieldScanner.HasActiveFieldAsync(reader, cancellationToken);
+                    }
+                }
+            }
+        }
+
+        if (fields == true)
+        {
+            found |= ActiveContent.ActiveFields;
+        }
+
+        return found;
+    }
+
+    /// <summary>The relationships to something outside the file that Word follows on its own, as <see cref="OrdDocument.ExternalReferences"/> has them.</summary>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>Every external relationship but hyperlinks, with the part it belongs to.</returns>
+    public async Task<IReadOnlyList<OpcExternalRelationship>> GetExternalReferencesAsync(CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<OpcExternalRelationship> all = await package.GetExternalRelationshipsAsync(cancellationToken);
+
+        return [.. all.Where(item => item.IsHyperlink == false)];
+    }
+
     /// <summary>Opens a file. The styles and list definitions are read now; the body as it is asked for.</summary>
     /// <param name="path">The file.</param>
     /// <param name="options">The revision view and limits; <see cref="ReadOptions.Default"/> when null.</param>

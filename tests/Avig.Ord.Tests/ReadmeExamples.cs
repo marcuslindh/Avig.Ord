@@ -332,6 +332,35 @@ public sealed class ReadmeExamples : IDisposable
         Assert.Equal("Det var en ny text.", document.ToPlainText());
     }
 
+    [Fact]
+    public async Task Clean_a_file_from_outside()
+    {
+        await File.WriteAllBytesAsync("from-outside.docm", await ActiveContentTests.FileWithAsync("everything"));
+
+        #region example: clean
+        if ((await OrdDocument.OpenAsync("from-outside.docm")).IsSuccess(out OrdDocument? document) == false)
+        {
+            return;
+        }
+
+        Console.WriteLine(document.ActiveContent);   // Macros, ActiveX, EmbeddedObjects, ActiveFields, ExternalReferences
+
+        foreach (Avig.OpenXml.OpcExternalRelationship link in document.ExternalReferences)
+        {
+            Console.WriteLine($"{link.Kind}: {link.Target}");   // attachedTemplate: https://evil.example/template.dotm
+        }
+
+        // Macros, ActiveX controls, embedded objects, fields such as DDE and every external
+        // reference but hyperlinks go; the text and the pictures stay.
+        document.RemoveActiveContent();
+        await document.SaveAsync("cleaned.docx");
+        #endregion
+
+        OrdDocument cleaned = await OpenAsync("cleaned.docx");
+        Assert.Equal(ActiveContent.None, cleaned.ActiveContent);
+        TestFiles.AssertValid(await File.ReadAllBytesAsync("cleaned.docx"));
+    }
+
     private static async Task<OrdDocument> OpenAsync(string path)
     {
         Result<OrdDocument> opened = await OrdDocument.OpenAsync(path);

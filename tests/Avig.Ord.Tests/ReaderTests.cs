@@ -447,7 +447,7 @@ public class ReaderTests
         return copy.ToArray();
     }
 
-    private static Task<byte[]> ConvertToMacroAsync(byte[] file)
+    internal static Task<byte[]> ConvertToMacroAsync(byte[] file)
     {
         using MemoryStream copy = new();
         copy.Write(file);

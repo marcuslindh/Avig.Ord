@@ -35,6 +35,11 @@ internal static class Harness
         RevisionView view = Views[Math.Abs(selector % Views.Length)];
         await ReadStreamingAsync(file, view);
         await EditAndSaveAsync(file, view, (selector & 4) != 0);
+
+        if ((selector & 8) != 0)
+        {
+            await CleanAsync(file, (selector & 16) != 0);
+        }
     }
 
     /// <summary>Reads the body with <see cref="DocxReader"/> three times: as blocks, as events, and as Markdown and text.</summary>
@@ -149,6 +154,58 @@ internal static class Harness
         }
     }
 
+    /// <summary>
+    /// Finds and takes out the active content: the streaming reader must find what the document
+    /// model finds, and the cleaned file must open again with none left.
+    /// </summary>
+    public static async Task CleanAsync(byte[] file, bool flat)
+    {
+        Result<OrdDocument> opened = await OrdDocument.OpenAsync(new MemoryStream(file, false));
+
+        if (opened.IsSuccess(out OrdDocument? document) == false)
+        {
+            CheckKind(opened.ErrorKind(), opened.Error);
+
+            return;
+        }
+
+        ActiveContent found = document.ActiveContent;
+        int references = document.ExternalReferences.Count;
+
+        await StreamAsync(file, ReadOptions.Default, async reader =>
+        {
+            ActiveContent streamed = await reader.GetActiveContentAsync();
+            int streamedReferences = (await reader.GetExternalReferencesAsync()).Count;
+
+            if (streamed != found || streamedReferences != references)
+            {
+                throw new InvariantViolationException($"The reader finds {streamed} and {streamedReferences} external references, the document model {found} and {references}.");
+            }
+        });
+
+        document.RemoveActiveContent();
+
+        if (document.ActiveContent != ActiveContent.None)
+        {
+            throw new InvariantViolationException($"After RemoveActiveContent the document still has {document.ActiveContent}.");
+        }
+
+        byte[] saved = await SaveAsync(document, new SaveOptions { FlatOpc = flat });
+        Result<OrdDocument> reopened = await OrdDocument.OpenAsync(new MemoryStream(saved, false));
+
+        if (reopened.IsSuccess(out OrdDocument? again) == false)
+        {
+            throw new InvariantViolationException($"A cleaned document cannot be opened again: {reopened.Error}");
+        }
+
+        if (again.ActiveContent != ActiveContent.None)
+        {
+            throw new InvariantViolationException($"A cleaned and saved document has {again.ActiveContent}.");
+        }
+
+        await ExploreAsync(again);
+    }
+
     /// <summary>The changes every file target makes: text, a list item, a table, a picture, a note and a property.</summary>
     public static void Edit(OrdDocument document)
     {
@@ -195,6 +252,8 @@ internal static class Harness
         _ = document.ToMarkdown(new MarkdownOptions { TextBoxes = false, PictureFolder = string.Empty, PictureLink = picture => picture.PartName });
         _ = document.Kind;
         _ = document.HasMacros;
+        _ = document.ActiveContent;
+        _ = document.ExternalReferences.Count;
 
         foreach (HeaderFooter part in document.Headers.Concat(document.Footers))
         {

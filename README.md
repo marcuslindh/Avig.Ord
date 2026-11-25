@@ -321,6 +321,36 @@ foreach (Run run in document.Paragraphs[0].Runs.Where(run => run.Revision != Rev
 document.AcceptAllRevisions();   // or RejectAllRevisions(), before saving a clean copy
 ```
 
+## Files from outside
+
+Avig.Ord never runs a macro, follows a link or updates a field, but a document it saves keeps
+whatever it had. `ActiveContent` says what in a file can act on its own or fetch something when
+Word opens it — the ways malware gets into documents: macros, ActiveX controls, embedded OLE
+objects, fields such as DDE and INCLUDEPICTURE, and external references such as a template
+attached from a server. `RemoveActiveContent` takes all of it out, and Word opens the result
+without repair. Zip files that say one thing to Office and another to a scanner are refused when
+they are opened.
+
+<!-- example: clean -->
+```csharp
+if ((await OrdDocument.OpenAsync("from-outside.docm")).IsSuccess(out OrdDocument? document) == false)
+{
+    return;
+}
+
+Console.WriteLine(document.ActiveContent);   // Macros, ActiveX, EmbeddedObjects, ActiveFields, ExternalReferences
+
+foreach (Avig.OpenXml.OpcExternalRelationship link in document.ExternalReferences)
+{
+    Console.WriteLine($"{link.Kind}: {link.Target}");   // attachedTemplate: https://evil.example/template.dotm
+}
+
+// Macros, ActiveX controls, embedded objects, fields such as DDE and every external
+// reference but hyperlinks go; the text and the pictures stay.
+document.RemoveActiveContent();
+await document.SaveAsync("cleaned.docx");
+```
+
 ## The API at a glance
 
 | Task | API |
@@ -337,6 +367,7 @@ document.AcceptAllRevisions();   // or RejectAllRevisions(), before saving a cle
 | Templates | `FillTemplate`, `TemplateValues`, `[OrdTemplate]`, `[TemplateName]`, `TemplateResult.Missing` |
 | Out | `ToPlainText`, `ToMarkdown`, `SaveMarkdownAsync` |
 | Macros | `HasMacros`, `RemoveMacros` (macros are kept or removed, never run) |
+| Active content | `ActiveContent`, `ExternalReferences`, `RemoveActiveContent`; `DocxReader.GetActiveContentAsync`, `GetExternalReferencesAsync` |
 | Limits and errors | `OrdLimits`, `ErrorKind()`, `OrdErrorKind` |
 
 ## License

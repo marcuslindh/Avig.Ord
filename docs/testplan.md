@@ -187,6 +187,15 @@ djupgräns på 100, medan `OrdLimits.MaxXmlDepth` släpper igenom 256. Nu tar sk
 **S-09 Trasiga zip-arkiv [B]**
 - **Täckt av:** fuzzmålet `zip-raw`, `HostileFilesTests.Truncated_and_empty_files…`.
 
+**S-09b Zip-filer som säger två saker, och poster som inte hör hemma [B]**
+- **Test:** en post som bara finns i de lokala huvudena, byte före, mellan och efter posterna,
+  ett andra zip-arkiv efter det första, lokalt huvud med annat namn eller annan komprimering än
+  katalogen; namn med `.`-segment, `:`, procentkodade `..`, enhetsnamn (`CON`), Unicode-varianter
+  av `../`, samma del under en annan stavning, krypterade poster, mappar med data.
+- **Förväntat:** `Damaged` när filen öppnas (Avig.OpenXml 0.1.5–0.1.6, `OpcOpenOptions.StrictZip`).
+  232 riktiga filer från Office, LibreOffice och bibliotek på utvecklingsdatorn öppnas.
+- **Täckt av:** Avig.OpenXml `ZipStructureTests`, `StrayEntriesTests`.
+
 ### 2.3 Word-specifika attacker
 
 **S-10 Makron [A]**
@@ -199,7 +208,18 @@ djupgräns på 100, medan `OrdLimits.MaxXmlDepth` släpper igenom 256. Nu tar sk
 
 **S-12 Externa bilder och länkar [B]**
 - En bild med `r:link` eller extern relation läses aldrig från nätet; `ReadAsync` ger `NotFound`.
-  **Saknas:** ett eget test med `TargetMode="External"` för en bild.
+
+**S-15 Aktivt innehåll: rapportera och ta bort [A][B]**
+- **Test:** makron, ActiveX, inbäddade OLE-objekt och paket, `w:altChunk`, fälten DDE, DDEAUTO,
+  INCLUDETEXT, INCLUDEPICTURE, LINK, IMPORT och MACROBUTTON, en mall kopplad från en server,
+  länkade OLE-objekt och bilder. Hyperlänkar räknas inte.
+- **Förväntat:** `OrdDocument.ActiveContent` och `DocxReader.GetActiveContentAsync` ger samma
+  svar; `RemoveActiveContent` lämnar en fil utan något av det, som klarar schemavalidatorn och
+  som Word öppnar utan reparation, med texten och bilderna kvar.
+- **Täckt av:** `ActiveContentTests` (filer från Open XML SDK), fuzzmålen via `Harness.CleanAsync`,
+  och `Avig.Ord.WordCheck active` (Word gör OLE-paket, länkad bild, INCLUDEPICTURE och kopplad
+  mall; uppfyllt 2026-11-25 med Word 16.0.20625). ActiveX och DDE görs inte i Word-kontrollen:
+  Word väntar på en säkerhetsfråga för ActiveX och kör ett DDE-fält när det läggs in.
 
 ### 2.4 Övriga risker
 
