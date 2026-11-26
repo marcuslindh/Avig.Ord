@@ -22,7 +22,7 @@
     <!-- 0.x until all milestones are done. The first public version will be 1.0.0. -->
     <IsPackable>true</IsPackable>
     <PackageId>Avig.Ord</PackageId>
-    <Version>0.1.2</Version>
+    <Version>1.0.0</Version>
     <Title>Avig.Ord</Title>
     <Description>Read, write and edit Word .docx files: a streaming reader and writer, a document model that keeps what it does not understand, effective formatting through the style chain, list labels, tracked changes, search and replace across runs, templates with placeholders, merge fields and content controls, and text or Markdown out. Failures come back as Avig.Result values. No dependencies besides Avig.Result and Avig.OpenXml; trimming and Native AOT safe.</Description>
     <PackageTags>word;docx;dotx;docm;wordprocessingml;openxml;template;mail-merge;markdown</PackageTags>
