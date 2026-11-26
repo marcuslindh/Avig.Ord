@@ -11,7 +11,7 @@
       "Avig.OpenXml": {
         "type": "Transitive",
         "resolved": "0.3.2",
-        "contentHash": "0NIZDwu+04YqoF/BpZRBtxFJWoFn1DUMKniB/WhqCeYSYUXXdpL9oXUEVmp9d7YLwdkn0qByYatmWhXe+dN9aA==",
+        "contentHash": "ixpHJphKeiYNqR2bQycSpH2XCPWQoSbxYFbZRygsA4FnQtcmmqHFCWWpNQP4Oi+FGHu64lLPwin/jlbkoDC5tw==",
         "dependencies": {
           "Avig.Result": "1.0.2"
         }
