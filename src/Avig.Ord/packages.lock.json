@@ -10,9 +10,9 @@
       },
       "Avig.OpenXml": {
         "type": "Direct",
-        "requested": "[0.3.1, )",
-        "resolved": "0.3.1",
-        "contentHash": "FRforjHHhwpRLYsSZq+mDGYG1Y+sx52RQGtnV2wJTCz96sFB9u6uD5ny77mFdOVIdHSM3b7RwjGWFPYwCC8Twg==",
+        "requested": "[0.3.2, )",
+        "resolved": "0.3.2",
+        "contentHash": "0NIZDwu+04YqoF/BpZRBtxFJWoFn1DUMKniB/WhqCeYSYUXXdpL9oXUEVmp9d7YLwdkn0qByYatmWhXe+dN9aA==",
         "dependencies": {
           "Avig.Result": "1.0.2"
         }
